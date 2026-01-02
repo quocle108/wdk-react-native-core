@@ -5,23 +5,24 @@
  * Manages the complete initialization flow:
  * 1. Start worklet immediately on app open
  * 2. Check if wallet exists
- * 3. Wait for biometric authentication (if required)
- * 4. Initialize/load wallet
+ * 3. Initialize/load wallet
  *
  * This provider is generic and reusable - it doesn't know about app-specific
  * concerns like auth state or UI branding.
  */
 
 import React, { createContext, useEffect, useMemo } from 'react'
-import type { SecureStorage } from '@tetherto/wdk-react-native-secure-storage'
-import type { NetworkConfigs, TokenConfigs } from '../types'
-import { useWdkInitialization } from '../hooks/useWdkInitialization'
+
+import { createSecureStorage } from '@tetherto/wdk-react-native-secure-storage'
+
 import { useWdkBalanceSync } from '../hooks/useWdkBalanceSync'
-import { useAbortController } from '../hooks/useAbortController'
-import { validateNetworkConfigs, validateTokenConfigs, validateBalanceRefreshInterval } from '../utils/validation'
-import { normalizeError } from '../utils/errorUtils'
+import { useWdkInitialization } from '../hooks/useWdkInitialization'
+import { WalletSetupService } from '../services/walletSetupService'
 import { DEFAULT_BALANCE_REFRESH_INTERVAL_MS } from '../utils/constants'
+import { normalizeError } from '../utils/errorUtils'
 import { logError } from '../utils/logger'
+import { validateBalanceRefreshInterval, validateNetworkConfigs, validateTokenConfigs } from '../utils/validation'
+import type { NetworkConfigs, TokenConfigs } from '../types'
 
 
 /**
@@ -34,14 +35,14 @@ export interface WdkAppContextValue {
   isInitializing: boolean
   /** Whether a wallet exists in secure storage (null = checking) */
   walletExists: boolean | null
-  /** Waiting for biometric authentication */
-  needsBiometric: boolean
-  /** Call this after biometric authentication succeeds */
-  completeBiometric: () => void
   /** Initialization error if any */
   error: Error | null
   /** Retry initialization after an error */
   retry: () => void
+  /** Load existing wallet from storage (only if wallet exists, throws error if it doesn't) */
+  loadExisting: () => Promise<void>
+  /** Create and initialize a new wallet */
+  createNew: () => Promise<void>
   /** Balance fetching is in progress */
   isFetchingBalances: boolean
   /** Refresh all balances manually */
@@ -54,14 +55,10 @@ const WdkAppContext = createContext<WdkAppContextValue | null>(null)
  * Provider props
  */
 export interface WdkAppProviderProps {
-  /** Secure storage instance */
-  secureStorage: SecureStorage
   /** Network configurations */
   networkConfigs: NetworkConfigs
   /** Token configurations for balance fetching */
   tokenConfigs: TokenConfigs
-  /** Whether biometric authentication is required before wallet initialization */
-  requireBiometric?: boolean
   /** Whether to automatically fetch balances after wallet initialization */
   autoFetchBalances?: boolean
   /** Balance refresh interval in milliseconds (0 = no auto-refresh) */
@@ -79,89 +76,60 @@ export interface WdkAppProviderProps {
  * Automatically fetches balances when wallet is ready.
  */
 export function WdkAppProvider({
-  secureStorage,
   networkConfigs,
   tokenConfigs,
-  requireBiometric = false,
   autoFetchBalances = true,
   balanceRefreshInterval = DEFAULT_BALANCE_REFRESH_INTERVAL_MS,
   identifier,
   children,
 }: WdkAppProviderProps) {
+  // Create secureStorage singleton
+  const secureStorage = useMemo(() => createSecureStorage(), [])
+
+  // Set secureStorage in WalletSetupService
+  useEffect(() => {
+    WalletSetupService.setSecureStorage(secureStorage)
+  }, [secureStorage])
+
   // Validate props on mount and when props change
   useEffect(() => {
     try {
       validateNetworkConfigs(networkConfigs)
       validateTokenConfigs(tokenConfigs)
       validateBalanceRefreshInterval(balanceRefreshInterval)
-      
-      // Validate secureStorage has required methods
-      if (!secureStorage || typeof secureStorage !== 'object') {
-        throw new Error('secureStorage must be a SecureStorage instance')
-      }
-      const requiredMethods = ['authenticate', 'hasWallet', 'setEncryptionKey', 'setEncryptedSeed', 'getAllEncrypted']
-      for (const method of requiredMethods) {
-        if (typeof (secureStorage as unknown as Record<string, unknown>)[method] !== 'function') {
-          throw new Error(`secureStorage must have a ${method} method`)
-        }
-      }
     } catch (error) {
       const err = normalizeError(error, true, { component: 'WdkAppProvider', operation: 'propsValidation' })
       logError('[WdkAppProvider] Invalid props:', err)
       // Always throw validation errors - they indicate programming errors
       throw err
     }
-  }, [networkConfigs, tokenConfigs, balanceRefreshInterval, secureStorage])
+  }, [networkConfigs, tokenConfigs, balanceRefreshInterval])
 
-  // AbortController hook for managing async operation cancellation
-  const { getController } = useAbortController()
-
-  // WDK initialization hook - handles worklet startup, wallet checking, and initialization
+  // WDK initialization hook - handles worklet startup, wallet checking (but not automatic initialization)
   const {
     walletExists,
     isInitializing: isInitializingFromHook,
-    needsBiometric,
-    completeBiometric,
     error: initializationError,
     retry,
+    loadExisting,
+    createNew,
     isWorkletStarted,
     walletInitialized,
   } = useWdkInitialization(
     secureStorage,
     networkConfigs,
-    requireBiometric,
-    getController(),
     identifier
   )
 
   // Calculate readiness state
   const isReady = useMemo(() => {
-    // If biometric is required and not authenticated, not ready
-    if (requireBiometric && needsBiometric) {
-      return false
-    }
-
-    // If worklet isn't started, not ready
-    if (!isWorkletStarted) {
-      return false
-    }
-
-    // If wallet is initializing, not ready
-    if (isInitializingFromHook) {
-      return false
-    }
-
-    // If wallet should exist but isn't initialized yet, not ready
-    if (walletExists && !walletInitialized) {
-      return false
-    }
-
-    // All conditions met, ready
+    if (!isWorkletStarted) return false
+    if (initializationError || isInitializingFromHook) return false
+    if (walletExists && !walletInitialized) return false
     return true
   }, [
-    requireBiometric,
-    needsBiometric,
     isWorkletStarted,
+    initializationError,
     isInitializingFromHook,
     walletExists,
     walletInitialized,
@@ -184,14 +152,14 @@ export function WdkAppProvider({
       isReady,
       isInitializing: isInitializingFromHook,
       walletExists,
-      needsBiometric,
-      completeBiometric,
       error: initializationError,
       retry,
+      loadExisting,
+      createNew,
       isFetchingBalances,
       refreshBalances,
     }),
-    [isReady, isInitializingFromHook, walletExists, needsBiometric, completeBiometric, initializationError, retry, isFetchingBalances, refreshBalances]
+    [isReady, isInitializingFromHook, walletExists, initializationError, retry, loadExisting, createNew, isFetchingBalances, refreshBalances]
   )
 
   return (

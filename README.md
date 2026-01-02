@@ -7,7 +7,7 @@ Core functionality for React Native wallets - wallet management, balance fetchin
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/tetherto/wdk-react-native-core.git
+git clone https://github.com/itsdeka/wdk-react-native-core.git
 cd wdk-react-native-core
 
 # Install dependencies and build
@@ -20,7 +20,7 @@ npm run build
 From your app directory:
 
 ```bash
-npm install https://github.com/tetherto/wdk-react-native-core.git
+npm install https://github.com/itsdeka/wdk-react-native-core.git
 ```
 
 Or add to your `package.json`:
@@ -28,8 +28,8 @@ Or add to your `package.json`:
 ```json
 {
   "dependencies": {
-    "@tetherto/wdk-react-native-secure-storage": "github:tetherto/wdk-rn-secure-storage",
-    "@tetherto/wdk-react-native-core": "github:tetherto/wdk-react-native-core"
+    "@tetherto/wdk-react-native-secure-storage": "github:itsdeka/wdk-react-native-secure-storage",
+    "@tetherto/wdk-react-native-core": "github:itsdeka/wdk-react-native-core"
   }
 }
 ```
@@ -130,7 +130,6 @@ function App() {
       tokenConfigs={tokenConfigs}
       autoFetchBalances={true}
       balanceRefreshInterval={30000} // Refresh every 30 seconds
-      requireBiometric={true}
     >
       <WalletApp />
     </WdkAppProvider>
@@ -143,15 +142,9 @@ function WalletApp() {
     isInitializing,
     isFetchingBalances, 
     refreshBalances,
-    needsBiometric,
-    completeBiometric,
     error,
     retry
   } = useWdkApp();
-
-  if (needsBiometric) {
-    return <BiometricPrompt onComplete={completeBiometric} />;
-  }
 
   if (!isReady) return <LoadingScreen />;
 
@@ -355,7 +348,6 @@ interface WdkAppProviderProps {
   secureStorage: SecureStorage
   networkConfigs: NetworkConfigs
   tokenConfigs: TokenConfigs // Required for balance fetching
-  requireBiometric?: boolean
   autoFetchBalances?: boolean // Default: true
   balanceRefreshInterval?: number // Default: 30000ms (30 seconds), 0 to disable
   children: React.ReactNode
@@ -369,8 +361,6 @@ interface WdkAppContextValue {
   isReady: boolean
   isInitializing: boolean
   walletExists: boolean | null
-  needsBiometric: boolean
-  completeBiometric: () => void
   error: Error | null
   retry: () => void
   isFetchingBalances: boolean // New: balance fetching state
@@ -458,11 +448,10 @@ Use type guards when accepting data from external sources or APIs.
 ### Recommendations
 
 1. **Always use SecureStorage** for sensitive data (wallet seeds, encryption keys)
-2. **Enable biometric authentication** for wallet operations (`requireBiometric={true}`)
-3. **Automatic memory clearing** is enabled by default - sensitive data is cleared when app is backgrounded
-4. **Use error boundaries** to handle errors gracefully
-5. **Validate all inputs** before processing
-6. **Never log sensitive data** - error sanitization helps but be careful with custom logging
+2. **Automatic memory clearing** is enabled by default - sensitive data is cleared when app is backgrounded
+3. **Use error boundaries** to handle errors gracefully
+4. **Validate all inputs** before processing
+5. **Never log sensitive data** - error sanitization helps but be careful with custom logging
 
 ## Performance
 
@@ -486,20 +475,17 @@ The WdkAppProvider follows a specific initialization sequence:
    ↓
 4. Check Wallet Existence (async, after worklet starts)
    ↓
-5. Biometric Authentication (if required and wallet exists)
+5. Initialize Wallet (create new or load existing)
    ↓
-6. Initialize Wallet (create new or load existing)
+6. Fetch Initial Balances (if autoFetchBalances=true)
    ↓
-7. Fetch Initial Balances (if autoFetchBalances=true)
-   ↓
-8. Ready State (isReady=true)
+7. Ready State (isReady=true)
 ```
 
 ### State Transitions
 
-- `isInitializing`: true during steps 3-6
+- `isInitializing`: true during steps 3-5
 - `walletExists`: null → boolean (after step 4)
-- `needsBiometric`: true if step 5 is required
 - `isReady`: true only after all steps complete
 - `error`: set if any step fails
 
@@ -512,10 +498,9 @@ The WdkAppProvider follows a specific initialization sequence:
 **Solutions**:
 1. Check that `secureStorage` is properly configured and has required methods
 2. Verify `networkConfigs` are valid (use `validateNetworkConfigs()`)
-3. Ensure biometric authentication is available if `requireBiometric={true}`
-4. Check console logs for detailed error messages
-5. Verify worklet bundle is available (check `pear-wrk-wdk` dependency)
-6. Try calling `retry()` method from context
+3. Check console logs for detailed error messages
+4. Verify worklet bundle is available (check `pear-wrk-wdk` dependency)
+5. Try calling `retry()` method from context
 
 **Common Errors**:
 - "WDK not initialized" → Worklet failed to start, check network configs

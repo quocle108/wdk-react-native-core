@@ -1,13 +1,8 @@
-// React hooks
-import { useState, useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
-// Internal modules
-import type { SecureStorage } from '@tetherto/wdk-react-native-secure-storage'
-
-// Local imports
 import { WalletSetupService } from '../services/walletSetupService'
-import type { NetworkConfigs } from '../types'
 import { logError } from '../utils/logger'
+import type { NetworkConfigs } from '../types'
 
 /**
  * Hook for wallet initialization and lifecycle management
@@ -39,11 +34,19 @@ import { logError } from '../utils/logger'
  * await deleteWallet('user@example.com')
  * ```
  */
+export interface UseWalletSetupResult {
+  initializeWallet: (options?: { createNew?: boolean; identifier?: string }) => Promise<void>
+  initializeFromMnemonic: (mnemonic: string, walletIdentifier?: string) => Promise<void>
+  hasWallet: (walletIdentifier?: string) => Promise<boolean>
+  deleteWallet: (walletIdentifier?: string) => Promise<void>
+  isInitializing: boolean
+  error: string | null
+}
+
 export function useWalletSetup(
-  secureStorage: SecureStorage,
   networkConfigs: NetworkConfigs,
   identifier?: string
-) {
+): UseWalletSetupResult {
   const [isInitializing, setIsInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -61,7 +64,6 @@ export function useWalletSetup(
 
       try {
         await WalletSetupService.initializeWallet(
-          secureStorage,
           networkConfigs,
           {
             ...options,
@@ -78,7 +80,7 @@ export function useWalletSetup(
         setIsInitializing(false)
       }
     },
-    [secureStorage, networkConfigs, identifier]
+    [networkConfigs, identifier]
   )
 
   /**
@@ -89,9 +91,9 @@ export function useWalletSetup(
    */
   const hasWallet = useCallback(
     async (walletIdentifier?: string): Promise<boolean> => {
-      return WalletSetupService.hasWallet(secureStorage, walletIdentifier ?? identifier)
+      return WalletSetupService.hasWallet(walletIdentifier ?? identifier)
     },
-    [secureStorage, identifier]
+    [identifier]
   )
 
   /**
@@ -107,7 +109,6 @@ export function useWalletSetup(
 
       try {
         await WalletSetupService.initializeFromMnemonic(
-          secureStorage,
           networkConfigs,
           mnemonic,
           walletIdentifier ?? identifier
@@ -122,7 +123,7 @@ export function useWalletSetup(
         setIsInitializing(false)
       }
     },
-    [secureStorage, networkConfigs, identifier]
+    [networkConfigs, identifier]
   )
 
   /**
@@ -137,7 +138,7 @@ export function useWalletSetup(
       setError(null)
 
       try {
-        await WalletSetupService.deleteWallet(secureStorage, walletIdentifier ?? identifier)
+        await WalletSetupService.deleteWallet(walletIdentifier ?? identifier)
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : String(err)
@@ -148,7 +149,7 @@ export function useWalletSetup(
         setIsInitializing(false)
       }
     },
-    [secureStorage, identifier]
+    [identifier]
   )
 
   // Memoize return object to prevent unnecessary re-renders
@@ -163,14 +164,5 @@ export function useWalletSetup(
     }),
     [initializeWallet, initializeFromMnemonic, hasWallet, deleteWallet, isInitializing, error]
   )
-
-  return {
-    initializeWallet,
-    initializeFromMnemonic,
-    hasWallet,
-    deleteWallet,
-    isInitializing,
-    error,
-  }
 }
 

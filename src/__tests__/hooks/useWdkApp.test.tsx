@@ -18,10 +18,10 @@ describe('useWdkApp', () => {
       isReady: true,
       isInitializing: false,
       walletExists: true,
-      needsBiometric: false,
-      completeBiometric: jest.fn(),
       error: null,
       retry: jest.fn(),
+      loadExisting: jest.fn().mockResolvedValue(undefined),
+      createNew: jest.fn().mockResolvedValue(undefined),
       isFetchingBalances: false,
       refreshBalances: jest.fn(),
     }
@@ -30,13 +30,10 @@ describe('useWdkApp', () => {
     expect(mockContextValue).toHaveProperty('isReady')
     expect(mockContextValue).toHaveProperty('isInitializing')
     expect(mockContextValue).toHaveProperty('walletExists')
-    expect(mockContextValue).toHaveProperty('needsBiometric')
-    expect(mockContextValue).toHaveProperty('completeBiometric')
     expect(mockContextValue).toHaveProperty('error')
     expect(mockContextValue).toHaveProperty('retry')
     expect(mockContextValue).toHaveProperty('isFetchingBalances')
     expect(mockContextValue).toHaveProperty('refreshBalances')
-    expect(typeof mockContextValue.completeBiometric).toBe('function')
     expect(typeof mockContextValue.retry).toBe('function')
     expect(typeof mockContextValue.refreshBalances).toBe('function')
   })

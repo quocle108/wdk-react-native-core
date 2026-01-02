@@ -7,7 +7,7 @@
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { isReady, isInitializing, needsBiometric, completeBiometric } = useWdkApp()
+ *   const { isReady, isInitializing } = useWdkApp()
  *
  *   if (!isReady) {
  *     return <LoadingScreen />
@@ -19,6 +19,7 @@
  */
 
 import { useContext } from 'react'
+
 import { WdkAppContext } from '../provider/WdkAppProvider'
 import type { WdkAppContextValue } from '../provider/WdkAppProvider'
 

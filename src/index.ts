@@ -36,6 +36,8 @@ export { useWallet } from './hooks/useWallet'
 export { useWalletSetup } from './hooks/useWalletSetup'
 export { useWdkApp } from './hooks/useWdkApp'
 export { useBalanceFetcher } from './hooks/useBalanceFetcher'
+export { useMnemonic } from './hooks/useMnemonic'
+export type { UseMnemonicReturn } from './hooks/useMnemonic'
 
 // Validation Utilities (for validating configs before use)
 export { 
@@ -64,7 +66,7 @@ export { WalletSetupService } from './services/walletSetupService'
 
 // Utility Functions
 export { validateMnemonic } from './utils/mnemonicUtils'
-export { convertBalanceToString, formatBalance } from './utils/balanceUtils'
+export { convertBalanceToString, formatBalance, convertBigIntToString } from './utils/balanceUtils'
 export { normalizeError, getErrorMessage, isErrorType, createContextualError } from './utils/errorUtils'
 
 // Result Type (for error handling patterns)
