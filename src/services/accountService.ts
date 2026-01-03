@@ -7,7 +7,6 @@
  */
 
 import { convertBigIntToString } from '../utils/balanceUtils'
-import { ALLOWED_ACCOUNT_METHODS, type AllowedAccountMethod } from '../utils/constants'
 import { handleServiceError } from '../utils/errorHandling'
 import { safeStringify } from '../utils/jsonUtils'
 import { workletResponseSchema } from '../utils/schemas'
@@ -33,7 +32,7 @@ export class AccountService {
    * @param args - Optional arguments for the method
    * @param walletId - Optional wallet identifier (for consistency, worklet should already have correct wallet loaded)
    * @returns Promise with the method result
-   * @throws Error if methodName is not in the allowed list or if validation fails
+   * @throws Error if validation fails
    * 
    * @example
    * ```typescript
@@ -67,13 +66,6 @@ export class AccountService {
     // Validate methodName parameter
     if (typeof methodName !== 'string' || methodName.trim().length === 0) {
       throw new Error('methodName must be a non-empty string')
-    }
-
-    // Whitelist validation - only allow approved methods
-    if (!ALLOWED_ACCOUNT_METHODS.includes(methodName as AllowedAccountMethod)) {
-      throw new Error(
-        `Method "${methodName}" is not allowed. Allowed methods: ${ALLOWED_ACCOUNT_METHODS.join(', ')}`
-      )
     }
 
     // Validate inputs

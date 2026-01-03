@@ -574,13 +574,8 @@ export class WalletSetupService {
       walletId?: string
     }
   ): Promise<void> {
-    const store = getWorkletStore()
-
-    // Check if already initialized
-    if (store.getState().isInitialized) {
-      log('Wallet already initialized')
-      return
-    }
+    // Remove the early return check - WorkletLifecycleService.initializeWDK() will handle
+    // checking if credentials match (it already has the correct logic to skip if same credentials)
 
     let credentials: { encryptionKey: string; encryptedSeed: string }
 

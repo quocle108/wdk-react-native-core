@@ -52,28 +52,30 @@ export function getWalletSwitchDecision(
 
 /**
  * Determine if wallet should be marked as ready
- * This checks two conditions:
- * 1. Wallet has addresses but state is not_loaded (addresses appeared before state update)
- * 2. Wallet is in loading state and addresses exist (initialization completed)
+ * This checks if wallet is in loading/checking state, addresses exist, and worklet is initialized with seed
+ * 
+ * Note: If addresses exist but state is not_loaded, we need to go through loading first.
+ * This is handled by useWalletManager.initializeWallet() or useOnboarding.
  * 
  * @param walletLoadingState - Current wallet loading state
  * @param hasAddresses - Whether wallet has addresses available
  * @param currentWalletId - Wallet ID currently tracked in loading state
  * @param activeWalletId - Currently active wallet identifier
+ * @param isWorkletInitialized - Whether the worklet is initialized with wallet credentials (seed loaded)
  * @returns true if wallet should be marked as ready
  */
 export function shouldMarkWalletAsReady(
   walletLoadingState: WalletLoadingState,
   hasAddresses: boolean,
   currentWalletId: string | null,
-  activeWalletId: string | null
+  activeWalletId: string | null,
+  isWorkletInitialized: boolean
 ): boolean {
-  // Wallet has addresses but state is not_loaded
-  if (walletLoadingState.type === 'not_loaded' && hasAddresses) {
-    return true
-  }
-  // Initialization completed: loading state and addresses exist
-  if (isWalletLoadingState(walletLoadingState) && currentWalletId === activeWalletId && hasAddresses) {
+  // Only allow ready transition from loading/checking states
+  // AND worklet must be initialized with seed (not just addresses cached)
+  // If addresses exist but state is not_loaded, we need to go through loading first
+  // This is handled by useWalletManager.initializeWallet() or useOnboarding
+  if (isWalletLoadingState(walletLoadingState) && currentWalletId === activeWalletId && hasAddresses && isWorkletInitialized) {
     return true
   }
   return false

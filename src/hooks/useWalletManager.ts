@@ -176,6 +176,16 @@ export function useWalletManager(
       const effectiveNetworkConfigs = getNetworkConfigs()
 
       try {
+        // Check if wallet is already ready before attempting to initialize
+        // This prevents unnecessary initialization calls when the wallet is already loaded
+        if (targetWalletId) {
+          const currentWalletState = walletStore.getState().walletLoadingState
+          if (currentWalletState.type === 'ready' && currentWalletState.identifier === targetWalletId) {
+            log('[useWalletManager] Wallet already ready - skipping initialization', { targetWalletId })
+            return
+          }
+        }
+
         // Update loading state in store (single source of truth)
         if (targetWalletId) {
           walletStore.setState((prev) => updateWalletLoadingState(prev, {
@@ -194,11 +204,87 @@ export function useWalletManager(
         )
 
         // Mark as ready on success
+        // Wallet is ready when initializeWDK() completes successfully, even if addresses don't exist yet
+        // (Addresses are lazy-loaded when getAddress() is called)
+        // This matches the pattern used in WalletSwitchingService.switchToWallet()
         if (targetWalletId) {
-          walletStore.setState((prev) => updateWalletLoadingState(prev, {
-            type: 'ready',
-            identifier: targetWalletId,
-          }))
+          walletStore.setState((prev) => {
+            const currentState = prev.walletLoadingState
+            const addresses = prev.addresses[targetWalletId]
+            const hasAddresses = !!(addresses && Object.keys(addresses).length > 0)
+            
+            // If addresses exist, we can set to ready if state allows it
+            // WdkAppProvider will also handle transitions when addresses appear
+            if (hasAddresses) {
+              // Only set to ready if current state allows the transition
+              // Valid transitions to ready: from 'loading' or 'checking'
+              if (currentState.type === 'loading' || currentState.type === 'checking') {
+                const readyStateUpdate = updateWalletLoadingState(prev, {
+                  type: 'ready',
+                  identifier: targetWalletId,
+                })
+                // Also set activeWalletId to prevent WdkAppProvider from resetting state
+                return {
+                  ...readyStateUpdate,
+                  activeWalletId: targetWalletId,
+                }
+              }
+              // If state is 'not_loaded', let WdkAppProvider handle it (it will transition when addresses exist)
+              // If state is already 'ready', don't change it
+              return prev
+            }
+            
+            // If no addresses yet, set to ready if state is 'loading' or 'checking' (normal case)
+            // The wallet is ready when WDK is initialized with correct credentials, addresses can be fetched lazily
+            // Note: Cannot transition from 'not_loaded' directly to 'ready' - must go through 'loading' first
+            if (currentState.type === 'loading' || currentState.type === 'checking') {
+              const readyStateUpdate = updateWalletLoadingState(prev, {
+                type: 'ready',
+                identifier: targetWalletId,
+              })
+              // Also set activeWalletId to prevent WdkAppProvider from resetting state
+              return {
+                ...readyStateUpdate,
+                activeWalletId: targetWalletId,
+              }
+            } else if (currentState.type === 'not_loaded') {
+              // State was reset to not_loaded by WdkAppProvider
+              // We need to transition through 'loading' first, then 'ready'
+              // Since initializeWDK() already completed successfully, we can do both transitions
+              // in sequence within the same setState call
+              log('[useWalletManager] State reset to not_loaded, transitioning through loading to ready', {
+                targetWalletId,
+                hasAddresses,
+              })
+              // First transition: not_loaded -> loading
+              const loadingStateUpdate = updateWalletLoadingState(prev, {
+                type: 'loading',
+                identifier: targetWalletId,
+                walletExists: true,
+              })
+              // Second transition: loading -> ready (using the updated state)
+              const readyStateUpdate = updateWalletLoadingState(
+                { ...prev, ...loadingStateUpdate } as typeof prev,
+                {
+                  type: 'ready',
+                  identifier: targetWalletId,
+                }
+              )
+              // Also set activeWalletId to prevent WdkAppProvider from resetting state
+              return {
+                ...readyStateUpdate,
+                activeWalletId: targetWalletId,
+              }
+            } else {
+              // State is 'ready' or 'error' - don't change it
+              log('[useWalletManager] Wallet already in final state, not changing', {
+                currentState: currentState.type,
+                targetWalletId,
+                hasAddresses,
+              })
+              return prev
+            }
+          })
         }
       } catch (err) {
         const errorMessage =
