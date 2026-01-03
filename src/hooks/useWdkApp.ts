@@ -6,14 +6,20 @@
  *
  * @example
  * ```tsx
+ * import { InitializationStatus, isReadyStatus } from '@tetherto/wdk-react-native-core'
+ * 
  * function MyComponent() {
- *   const { isReady, isInitializing } = useWdkApp()
+ *   const { status, isInitializing, activeWalletId, error } = useWdkApp()
  *
- *   if (!isReady) {
- *     return <LoadingScreen />
+ *   if (isReadyStatus(status)) {
+ *     return <AppContent walletId={activeWalletId} />
  *   }
  *
- *   return <AppContent />
+ *   if (status === InitializationStatus.ERROR) {
+ *     return <ErrorScreen error={error} />
+ *   }
+ *
+ *   return <LoadingScreen />
  * }
  * ```
  */

@@ -10,7 +10,7 @@
  * - Worklet runtime instances (worklet, hrpc, ipc)
  * - Worklet configuration (networkConfigs)
  * - Worklet initialization results (workletStartResult, wdkInitResult)
- * - Encrypted credentials in memory (encryptedSeed, encryptionKey) - NOT persisted
+ * - Encrypted credentials in memory (encryptedSeed, encryptionKey)
  * 
  * **walletStore** (walletStore.ts):
  * - Wallet data (addresses, balances)
@@ -32,7 +32,9 @@
  * 
  * - NEVER store wallet data (addresses, balances) in workletStore
  * - NEVER store worklet lifecycle state in walletStore
- * - Encrypted credentials in workletStore are runtime-only (not persisted)
+ * - **All worklet state is runtime-only** - state resets completely on app restart
+ * - Worklets must be recreated from 0 when the app restarts
+ * - Encrypted credentials are runtime-only (loaded from secure storage when needed)
  * - All operations are handled by WorkletLifecycleService, not the store itself
  * 
  * For wallet data (addresses, balances), see walletStore.ts
@@ -40,7 +42,6 @@
 
 // External packages
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
 import { Worklet } from 'react-native-bare-kit'
 import { HRPC } from 'pear-wrk-wdk'
 import type { WorkletStartResponse } from 'pear-wrk-wdk/types/rpc'
@@ -49,8 +50,6 @@ import type { WorkletStartResponse } from 'pear-wrk-wdk/types/rpc'
 import type {
   NetworkConfigs,
 } from '../types'
-import { createMMKVStorageAdapter } from '../storage/mmkvStorage'
-import { log } from '../utils/logger'
 
 export interface WorkletState {
   worklet: Worklet | null
@@ -89,12 +88,14 @@ const initialState: WorkletState = {
   wdkInitResult: null,
 }
 
-const defaultStorageAdapter = createMMKVStorageAdapter()
-
 let workletStoreInstance: WorkletStoreInstance | null = null
 
 /**
  * Creates singleton worklet store instance.
+ * 
+ * This store is runtime-only - all state resets on app restart.
+ * Worklets must be recreated from 0 when the app restarts.
+ * 
  * All operations are handled by WorkletLifecycleService, not the store itself.
  */
 export function createWorkletStore(): WorkletStoreInstance {
@@ -102,40 +103,9 @@ export function createWorkletStore(): WorkletStoreInstance {
     return workletStoreInstance
   }
 
-  const store = create<WorkletStore>()(
-    persist(
-      () => ({
-        ...initialState,
-      }),
-      {
-        name: 'worklet-storage',
-        storage: createJSONStorage(() => defaultStorageAdapter),
-        partialize: (state) => ({
-          // NEVER persist seedPhrase - only encrypted seed
-          // encryptionKey is NOT persisted - stored in secure storage with biometrics
-          // encryptedSeed is NOT persisted - stored in secure storage with biometrics
-          // Both are runtime-only and loaded from keychain when needed
-          networkConfigs: state.networkConfigs,
-          workletStartResult: state.workletStartResult,
-          wdkInitResult: state.wdkInitResult,
-        }),
-        onRehydrateStorage: () => {
-          return (state) => {
-            if (state) {
-              log('🔄 Rehydrating worklet state - resetting initialization flags (worklet/HRPC are runtime-only)')
-              state.isInitialized = false
-              state.isWorkletStarted = false
-              state.worklet = null
-              state.hrpc = null
-              state.ipc = null
-              state.isLoading = false
-              state.error = null
-            }
-          }
-        },
-      }
-    )
-  )
+  const store = create<WorkletStore>()(() => ({
+    ...initialState,
+  }))
 
   workletStoreInstance = store
   return store

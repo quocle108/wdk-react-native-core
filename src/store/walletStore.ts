@@ -11,6 +11,13 @@
  * - Address loading states: { [network-accountIndex]: boolean }
  * - Balance loading states: { [network-accountIndex-tokenAddress]: boolean }
  * - Last balance update timestamps: { [network]: { [accountIndex]: timestamp } }
+ * - Account list: Array of account info for current wallet
+ * - Active account index: Currently active account index
+ * - Wallet list: Array of wallet info (multiple wallets)
+ * - Active wallet ID: Currently active wallet identifier
+ * 
+ * Note: Loading states for account/wallet list operations are managed locally in hooks
+ * (useAccountList, useWalletManager) since they're ephemeral and only used within those hooks.
  * 
  * **workletStore** (workletStore.ts):
  * - Worklet lifecycle state (isWorkletStarted, isInitialized, etc.)
@@ -59,6 +66,24 @@ export interface WalletLoadingStates {
   [key: string]: boolean
 }
 
+export interface AccountInfo {
+  /** Account index (0-based) */
+  accountIndex: number
+  /** Account address for each network */
+  addresses: Record<string, string>
+  /** Whether this account is currently active */
+  isActive: boolean
+}
+
+export interface WalletInfo {
+  /** Wallet identifier (e.g., user email) */
+  identifier: string
+  /** Whether wallet exists in secure storage */
+  exists: boolean
+  /** Whether this wallet is currently active/initialized */
+  isActive: boolean
+}
+
 export interface WalletState {
   // SOURCE OF TRUTH - addresses stored ONLY here
   addresses: WalletAddresses
@@ -68,6 +93,12 @@ export interface WalletState {
   // Maps "network-accountIndex-tokenAddress" -> boolean
   balanceLoading: BalanceLoadingStates
   lastBalanceUpdate: Record<string, Record<number, number>>
+  // Account list management
+  accountList: AccountInfo[]
+  activeAccountIndex: number
+  // Wallet list management
+  walletList: WalletInfo[]
+  activeWalletId: string | null
 }
 
 export type WalletStore = WalletState
@@ -80,6 +111,10 @@ const initialState: WalletState = {
   balances: {},
   balanceLoading: {},
   lastBalanceUpdate: {},
+  accountList: [],
+  activeAccountIndex: 0,
+  walletList: [],
+  activeWalletId: null,
 }
 
 const defaultStorageAdapter = createMMKVStorageAdapter()
@@ -108,6 +143,10 @@ export function createWalletStore(): WalletStoreInstance {
           balances: state.balances,
           balanceLoading: {},
           lastBalanceUpdate: state.lastBalanceUpdate,
+          accountList: state.accountList,
+          activeAccountIndex: state.activeAccountIndex,
+          walletList: state.walletList,
+          activeWalletId: state.activeWalletId,
         }),
         onRehydrateStorage: () => {
           return (state) => {

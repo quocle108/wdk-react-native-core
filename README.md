@@ -106,7 +106,7 @@ function WalletComponent() {
 ### Provider with Automatic Balance Fetching
 
 ```typescript
-import { WdkAppProvider, useWdkApp } from '@tetherto/wdk-react-native-core';
+import { WdkAppProvider, useWdkApp, InitializationStatus, isReadyStatus } from '@tetherto/wdk-react-native-core';
 import { createSecureStorage } from '@tetherto/wdk-react-native-secure-storage';
 
 function App() {
@@ -138,15 +138,15 @@ function App() {
 
 function WalletApp() {
   const { 
-    isReady, 
+    status,
     isInitializing,
     isFetchingBalances, 
     refreshBalances,
     error,
     retry
   } = useWdkApp();
-
-  if (!isReady) return <LoadingScreen />;
+  
+  if (!isReadyStatus(status)) return <LoadingScreen />;
 
   if (error) {
     return (
@@ -358,13 +358,15 @@ interface WdkAppProviderProps {
 
 ```typescript
 interface WdkAppContextValue {
-  isReady: boolean
-  isInitializing: boolean
-  walletExists: boolean | null
+  status: InitializationStatus // Primary state - use this as single source of truth
+  isInitializing: boolean // Convenience getter (equivalent to isInProgressStatus(status))
+  walletExists: boolean | null // null = not checked yet, true = exists, false = doesn't exist
   error: Error | null
   retry: () => void
-  isFetchingBalances: boolean // New: balance fetching state
-  refreshBalances: () => Promise<void> // New: manual balance refresh
+  loadExisting: (identifier: string) => Promise<void>
+  createNew: (identifier?: string) => Promise<void>
+  isFetchingBalances: boolean // Deprecated - use useBalance hook's isLoading instead
+  refreshBalances: () => Promise<void> // Deprecated - use useRefreshBalance() hook instead
 }
 ```
 
@@ -479,21 +481,23 @@ The WdkAppProvider follows a specific initialization sequence:
    ↓
 6. Fetch Initial Balances (if autoFetchBalances=true)
    ↓
-7. Ready State (isReady=true)
+7. Ready State (status === InitializationStatus.READY)
 ```
 
 ### State Transitions
 
-- `isInitializing`: true during steps 3-5
+- `status`: progresses through InitializationStatus enum states
+- `isInitializing`: true during steps 3-5 (convenience getter)
 - `walletExists`: null → boolean (after step 4)
-- `isReady`: true only after all steps complete
 - `error`: set if any step fails
+
+Use `status` as the single source of truth. Helper functions like `isReadyStatus()`, `isInProgressStatus()`, etc. are available from the InitializationStatus utilities.
 
 ## Troubleshooting
 
 ### Wallet Initialization Fails
 
-**Symptoms**: `isReady` stays false, `error` is set
+**Symptoms**: `status` is `InitializationStatus.ERROR`, `error` is set
 
 **Solutions**:
 1. Check that `secureStorage` is properly configured and has required methods
@@ -514,13 +518,13 @@ The WdkAppProvider follows a specific initialization sequence:
 **Solutions**:
 1. Verify `tokenConfigs` are properly configured with valid token addresses
 2. Check network connectivity and RPC endpoint availability
-3. Ensure wallet is initialized before fetching balances (`isReady=true`)
+3. Ensure wallet is initialized before fetching balances (`status === InitializationStatus.READY`)
 4. Check token addresses are valid Ethereum addresses (0x followed by 40 hex chars)
 5. Verify network names in `tokenConfigs` match `networkConfigs`
 6. If experiencing RPC throttling, consider reducing `balanceRefreshInterval` or implementing backoff
 
 **Common Errors**:
-- "Wallet not initialized" → Wait for `isReady=true` before fetching
+- "Wallet not initialized" → Wait for `status === InitializationStatus.READY` before fetching
 - "Failed to fetch balance" → RPC endpoint issue or invalid token address
 - RPC throttling → Reduce `balanceRefreshInterval` or implement backoff
 
@@ -531,7 +535,7 @@ The WdkAppProvider follows a specific initialization sequence:
 **Solutions**:
 1. Ensure `WdkAppProvider` is only mounted once at app root
 2. Don't call initialization methods directly - let provider handle it
-3. Wait for `isReady=true` before performing wallet operations
+3. Wait for `status === InitializationStatus.READY` before performing wallet operations
 4. Use `retry()` method instead of manually re-initializing
 
 ### Type Validation Errors

@@ -37,10 +37,8 @@ export { useWdkApp } from './hooks/useWdkApp'
 
 // New consolidated hooks
 export { useWalletManager } from './hooks/useWalletManager'
-export type { UseWalletManagerResult } from './hooks/useWalletManager'
+export type { UseWalletManagerResult, WalletInfo } from './hooks/useWalletManager'
 export { useBalance, useBalancesForWallet, useRefreshBalance, balanceQueryKeys } from './hooks/useBalance'
-export { useWalletList } from './hooks/useWalletList'
-export type { UseWalletListResult, WalletInfo } from './hooks/useWalletList'
 export { useAccountList } from './hooks/useAccountList'
 export type { UseAccountListResult, AccountInfo } from './hooks/useAccountList'
 
@@ -95,5 +93,14 @@ export type { Result } from './utils/result'
 export { ok, err, toResult, toResultSync } from './utils/result'
 
 // Initialization State Machine
-export { InitializationStatus, isErrorStatus, isReadyStatus, isInProgressStatus, isWalletInitializedStatus, getStatusMessage } from './utils/initializationState'
+export { 
+  InitializationStatus, 
+  isErrorStatus, 
+  isReadyStatus, 
+  isInProgressStatus, 
+  isWalletInitializedStatus, 
+  hasWorkletStarted,
+  canLoadWallet,
+  getStatusMessage 
+} from './utils/initializationState'
 

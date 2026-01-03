@@ -24,22 +24,18 @@
  * ```
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 
 import { AddressService } from '../services/addressService'
 import { getWalletStore } from '../store/walletStore'
 import { getWorkletStore } from '../store/workletStore'
 import { log, logError } from '../utils/logger'
 import type { NetworkConfigs } from '../types'
+import type { AccountInfo } from '../store/walletStore'
 
-export interface AccountInfo {
-  /** Account index (0-based) */
-  accountIndex: number
-  /** Account address for each network */
-  addresses: Record<string, string>
-  /** Whether this account is currently active */
-  isActive: boolean
-}
+// Re-export AccountInfo for backward compatibility
+export type { AccountInfo }
 
 export interface UseAccountListResult {
   /** List of all accounts for the current wallet */
@@ -71,10 +67,27 @@ export function useAccountList(
   networks: string[],
   initialAccountIndex: number = 0
 ): UseAccountListResult {
-  const [accounts, setAccounts] = useState<AccountInfo[]>([])
-  const [activeAccountIndex, setActiveAccountIndex] = useState<number>(initialAccountIndex)
+  const walletStore = getWalletStore()
+  
+  // Local loading and error state (ephemeral, only used in this hook)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Subscribe to Zustand state (only persistent data)
+  const accountListState = walletStore(
+    useShallow((state) => ({
+      accounts: state.accountList,
+      activeAccountIndex: state.activeAccountIndex,
+    }))
+  )
+
+  // Initialize activeAccountIndex if not set
+  useEffect(() => {
+    const currentIndex = walletStore.getState().activeAccountIndex
+    if (currentIndex === 0 && initialAccountIndex !== 0) {
+      walletStore.setState({ activeAccountIndex: initialAccountIndex })
+    }
+  }, [initialAccountIndex])
 
   /**
    * Get all account indices from wallet store addresses
@@ -109,13 +122,13 @@ export function useAccountList(
     try {
       const workletStore = getWorkletStore()
       if (!workletStore.getState().isInitialized) {
-        setAccounts([])
+        walletStore.setState({ accountList: [] })
         return
       }
 
       const accountIndices = getAllAccountIndices()
-      const walletStore = getWalletStore()
       const walletState = walletStore.getState()
+      const currentActiveIndex = walletState.activeAccountIndex
 
       const accountList: AccountInfo[] = accountIndices.map((accountIndex) => {
         const addresses: Record<string, string> = {}
@@ -130,11 +143,11 @@ export function useAccountList(
         return {
           accountIndex,
           addresses,
-          isActive: accountIndex === activeAccountIndex,
+          isActive: accountIndex === currentActiveIndex,
         }
       })
 
-      setAccounts(accountList)
+      walletStore.setState({ accountList })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
       logError('Failed to refresh account list:', err)
@@ -142,19 +155,19 @@ export function useAccountList(
     } finally {
       setIsLoading(false)
     }
-  }, [getAllAccountIndices, activeAccountIndex])
+  }, [getAllAccountIndices])
 
   /**
    * Switch to a different account
    */
   const switchAccount = useCallback((accountIndex: number) => {
-    setActiveAccountIndex(accountIndex)
-    setAccounts((prev) =>
-      prev.map((account) => ({
+    walletStore.setState((state) => ({
+      activeAccountIndex: accountIndex,
+      accountList: state.accountList.map((account) => ({
         ...account,
         isActive: account.accountIndex === accountIndex,
-      }))
-    )
+      })),
+    }))
     log(`Switched to account: ${accountIndex}`)
   }, [])
 
@@ -175,24 +188,28 @@ export function useAccountList(
       // Get or fetch address
       const address = await AddressService.getAddress(network, accountIndex)
 
-      // Update account list
-      setAccounts((prev) => {
-        const existing = prev.find((a) => a.accountIndex === accountIndex)
+      // Update account list in Zustand
+      walletStore.setState((state) => {
+        const existing = state.accountList.find((a) => a.accountIndex === accountIndex)
         if (existing) {
-          return prev.map((a) =>
-            a.accountIndex === accountIndex
-              ? { ...a, addresses: { ...a.addresses, [network]: address } }
-              : a
-          )
+          return {
+            accountList: state.accountList.map((a) =>
+              a.accountIndex === accountIndex
+                ? { ...a, addresses: { ...a.addresses, [network]: address } }
+                : a
+            ),
+          }
         } else {
-          return [
-            ...prev,
-            {
-              accountIndex,
-              addresses: { [network]: address },
-              isActive: accountIndex === activeAccountIndex,
-            },
-          ].sort((a, b) => a.accountIndex - b.accountIndex)
+          return {
+            accountList: [
+              ...state.accountList,
+              {
+                accountIndex,
+                addresses: { [network]: address },
+                isActive: accountIndex === state.activeAccountIndex,
+              },
+            ].sort((a, b) => a.accountIndex - b.accountIndex),
+          }
         }
       })
 
@@ -205,7 +222,7 @@ export function useAccountList(
     } finally {
       setIsLoading(false)
     }
-  }, [activeAccountIndex])
+  }, [])
 
   /**
    * Get address for an account on a network
@@ -235,15 +252,16 @@ export function useAccountList(
   }, [])
 
   // Initial refresh on mount
-  useMemo(() => {
+  useEffect(() => {
     if (networks.length > 0) {
       refresh(networks)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return {
-    accounts,
-    activeAccountIndex,
+    accounts: accountListState.accounts,
+    activeAccountIndex: accountListState.activeAccountIndex,
     switchAccount,
     ensureAccount,
     getAccountAddress,

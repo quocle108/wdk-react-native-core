@@ -8,21 +8,30 @@
 /**
  * Initialization status enum
  * 
- * Represents the current state of the WDK initialization process.
- * States progress in order: idle -> starting -> checking -> ready/error
+ * Represents the current state of the WDK app initialization.
+ * 
+ * IMPORTANT: This status represents the app-level readiness, not per-wallet state.
+ * The worklet is initialized once (global), but wallets are per-identifier.
+ * 
+ * Flow:
+ * 1. IDLE -> STARTING_WORKLET (worklet initialization begins)
+ * 2. STARTING_WORKLET -> WORKLET_READY (worklet runtime ready, can now load wallets)
+ * 3. WORKLET_READY -> LOADING_WALLET (user calls loadExisting/createNew)
+ * 4. LOADING_WALLET -> READY (wallet loaded, addresses available)
+ * 
+ * Note: After WORKLET_READY, you can load different wallets (per identifier),
+ * but the status only reflects the currently active wallet state.
  */
 export enum InitializationStatus {
-  /** Initial state - not started */
+  /** Initial state - worklet not started */
   IDLE = 'idle',
-  /** Worklet is starting */
+  /** Worklet runtime is starting (happens once, global) */
   STARTING_WORKLET = 'starting_worklet',
-  /** Checking if wallet exists in storage */
-  CHECKING_WALLET = 'checking_wallet',
-  /** Wallet checked - exists or doesn't exist */
-  WALLET_CHECKED = 'wallet_checked',
-  /** Initializing wallet (loading or creating) */
-  INITIALIZING_WALLET = 'initializing_wallet',
-  /** Fully ready - worklet started, wallet initialized, addresses available */
+  /** Worklet is ready - can now load wallets (per identifier) */
+  WORKLET_READY = 'worklet_ready',
+  /** Loading a wallet (checking existence, decrypting, initializing) */
+  LOADING_WALLET = 'loading_wallet',
+  /** Fully ready - worklet started, wallet loaded, addresses available */
   READY = 'ready',
   /** Error state - initialization failed */
   ERROR = 'error',
@@ -48,16 +57,41 @@ export function isReadyStatus(status: InitializationStatus): boolean {
 export function isInProgressStatus(status: InitializationStatus): boolean {
   return [
     InitializationStatus.STARTING_WORKLET,
-    InitializationStatus.CHECKING_WALLET,
-    InitializationStatus.INITIALIZING_WALLET,
+    InitializationStatus.LOADING_WALLET,
   ].includes(status)
 }
 
 /**
- * Helper to check if wallet is initialized (ready or error states)
+ * Helper to check if wallet is initialized and ready to use
+ * Only READY state means wallet is fully initialized with addresses available
  */
 export function isWalletInitializedStatus(status: InitializationStatus): boolean {
-  return status === InitializationStatus.READY || status === InitializationStatus.ERROR
+  return status === InitializationStatus.READY
+}
+
+/**
+ * Helper to check if worklet has started (worklet runtime is ready)
+ * Once worklet is ready, you can load wallets (per identifier)
+ */
+export function hasWorkletStarted(status: InitializationStatus): boolean {
+  return [
+    InitializationStatus.WORKLET_READY,
+    InitializationStatus.LOADING_WALLET,
+    InitializationStatus.READY,
+    InitializationStatus.ERROR,
+  ].includes(status)
+}
+
+/**
+ * Helper to check if wallet operations can be performed
+ * Returns true when worklet is ready (wallets can be loaded per identifier)
+ */
+export function canLoadWallet(status: InitializationStatus): boolean {
+  return [
+    InitializationStatus.WORKLET_READY,
+    InitializationStatus.LOADING_WALLET,
+    InitializationStatus.READY,
+  ].includes(status)
 }
 
 /**
@@ -69,12 +103,10 @@ export function getStatusMessage(status: InitializationStatus): string {
       return 'Not started'
     case InitializationStatus.STARTING_WORKLET:
       return 'Starting worklet...'
-    case InitializationStatus.CHECKING_WALLET:
-      return 'Checking wallet...'
-    case InitializationStatus.WALLET_CHECKED:
-      return 'Wallet checked'
-    case InitializationStatus.INITIALIZING_WALLET:
-      return 'Initializing wallet...'
+    case InitializationStatus.WORKLET_READY:
+      return 'Worklet ready - can load wallets'
+    case InitializationStatus.LOADING_WALLET:
+      return 'Loading wallet...'
     case InitializationStatus.READY:
       return 'Ready'
     case InitializationStatus.ERROR:
