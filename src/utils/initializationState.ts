@@ -116,3 +116,45 @@ export function getStatusMessage(status: InitializationStatus): string {
   }
 }
 
+/**
+ * Derives combined initialization status from worklet and wallet states
+ * 
+ * This function combines the global worklet state with the per-identifier wallet state
+ * to produce a unified initialization status.
+ * 
+ * @param workletState - Worklet state (global, from workletStore)
+ * @param walletState - Wallet state (per-identifier, from wallet state machine)
+ * @returns Combined initialization status
+ */
+export function getCombinedStatus(
+  workletState: { isWorkletStarted: boolean; isLoading: boolean; error: string | null },
+  walletState: { type: 'not_loaded' | 'checking' | 'loading' | 'ready' | 'error' }
+): InitializationStatus {
+  // Worklet errors take precedence
+  if (workletState.error) {
+    return InitializationStatus.ERROR
+  }
+
+  // Worklet not ready
+  if (!workletState.isWorkletStarted) {
+    return workletState.isLoading
+      ? InitializationStatus.STARTING_WORKLET
+      : InitializationStatus.IDLE
+  }
+
+  // Worklet ready, check wallet state
+  switch (walletState.type) {
+    case 'not_loaded':
+      return InitializationStatus.WORKLET_READY
+    case 'checking':
+    case 'loading':
+      return InitializationStatus.LOADING_WALLET
+    case 'ready':
+      return InitializationStatus.READY
+    case 'error':
+      return InitializationStatus.ERROR
+    default:
+      return InitializationStatus.IDLE
+  }
+}
+

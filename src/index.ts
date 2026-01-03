@@ -101,6 +101,18 @@ export {
   isWalletInitializedStatus, 
   hasWorkletStarted,
   canLoadWallet,
-  getStatusMessage 
+  getStatusMessage,
+  getCombinedStatus
 } from './utils/initializationState'
+
+// Wallet State Machine
+export { 
+  walletReducer,
+  getWalletIdentifier,
+  isWalletErrorState,
+  isWalletLoadingState,
+  isWalletReadyState,
+  type WalletState,
+  type WalletAction
+} from './utils/walletState'
 

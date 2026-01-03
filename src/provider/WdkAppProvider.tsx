@@ -25,83 +25,14 @@ import { useWallet } from '../hooks/useWallet'
 import { useWalletManager } from '../hooks/useWalletManager'
 import { useWorklet } from '../hooks/useWorklet'
 import { getWalletStore } from '../store/walletStore'
+import type { WalletStore } from '../store/walletStore'
 import { WalletSetupService } from '../services/walletSetupService'
 import { isAuthenticationError, normalizeError } from '../utils/errorUtils'
 import { log, logError, logWarn } from '../utils/logger'
 import { validateNetworkConfigs, validateTokenConfigs } from '../utils/validation'
-import { InitializationStatus, isReadyStatus, isInProgressStatus } from '../utils/initializationState'
+import { InitializationStatus, isReadyStatus, isInProgressStatus, getCombinedStatus } from '../utils/initializationState'
+import { walletReducer, type WalletState } from '../utils/walletState'
 import type { NetworkConfigs, TokenConfigs } from '../types'
-
-// Wallet state machine - separate from worklet state
-// Tracks wallet loading operations (per-identifier)
-type WalletState =
-  | { type: 'not_loaded' }
-  | { type: 'checking'; identifier: string }
-  | { type: 'loading'; identifier: string; walletExists: boolean }
-  | { type: 'ready'; identifier: string }
-  | { type: 'error'; identifier: string | null; error: Error }
-
-type WalletAction =
-  | { type: 'CHECK_WALLET'; identifier: string }
-  | { type: 'WALLET_CHECKED'; identifier: string; exists: boolean }
-  | { type: 'START_LOADING'; identifier: string; walletExists: boolean }
-  | { type: 'WALLET_LOADED'; identifier: string }
-  | { type: 'WALLET_ERROR'; identifier: string | null; error: Error }
-  | { type: 'RESET' }
-
-function walletReducer(state: WalletState, action: WalletAction): WalletState {
-  switch (action.type) {
-    case 'CHECK_WALLET':
-      return { type: 'checking', identifier: action.identifier }
-    case 'WALLET_CHECKED':
-      return { type: 'loading', identifier: action.identifier, walletExists: action.exists }
-    case 'START_LOADING':
-      return { type: 'loading', identifier: action.identifier, walletExists: action.walletExists }
-    case 'WALLET_LOADED':
-      return { type: 'ready', identifier: action.identifier }
-    case 'WALLET_ERROR':
-      return { type: 'error', identifier: action.identifier, error: action.error }
-    case 'RESET':
-      return { type: 'not_loaded' }
-    default:
-      return state
-  }
-}
-
-/**
- * Derives combined initialization status from worklet and wallet states
- */
-function getCombinedStatus(
-  workletState: { isWorkletStarted: boolean; isLoading: boolean; error: string | null },
-  walletState: WalletState
-): InitializationStatus {
-  // Worklet errors take precedence
-  if (workletState.error) {
-    return InitializationStatus.ERROR
-  }
-
-  // Worklet not ready
-  if (!workletState.isWorkletStarted) {
-    return workletState.isLoading
-      ? InitializationStatus.STARTING_WORKLET
-      : InitializationStatus.IDLE
-  }
-
-  // Worklet ready, check wallet state
-  switch (walletState.type) {
-    case 'not_loaded':
-      return InitializationStatus.WORKLET_READY
-    case 'checking':
-    case 'loading':
-      return InitializationStatus.LOADING_WALLET
-    case 'ready':
-      return InitializationStatus.READY
-    case 'error':
-      return InitializationStatus.ERROR
-    default:
-      return InitializationStatus.IDLE
-  }
-}
 
 
 
@@ -212,7 +143,7 @@ export function WdkAppProvider({
 
   // Active wallet ID - read from walletStore (single source of truth)
   const walletStore = getWalletStore()
-  const activeWalletId = walletStore((state) => state.activeWalletId)
+  const activeWalletId = walletStore((state: WalletStore) => state.activeWalletId)
 
   // Hooks for wallet operations
   const {
