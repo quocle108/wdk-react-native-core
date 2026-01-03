@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { AccountService } from '../services/accountService'
@@ -10,6 +10,10 @@ import { isOperationInProgress } from '../utils/operationMutex'
 import { log, logError } from '../utils/logger'
 import type { WalletStore } from '../store/walletStore'
 import type { WorkletStore } from '../store/workletStore'
+
+// Stable empty objects to prevent creating new objects on every render
+const EMPTY_ADDRESSES = {} as Record<string, Record<number, string>>
+const EMPTY_WALLET_LOADING = {} as Record<string, boolean>
 
 /**
  * Check if wallet switching should be skipped
@@ -121,20 +125,26 @@ export function useWallet(options?: {
   const targetWalletId = options?.walletId || activeWalletId
 
   // Subscribe to wallet state for target wallet
-  const walletSelector = useShallow((state: WalletStore) => {
-    const walletId = options?.walletId || state.activeWalletId
-    if (!walletId) {
-      return {
-        addresses: {},
-        walletLoading: {},
+  // useShallow ensures stable references when content doesn't change
+  // We select the specific wallet's data directly from the store
+  // Use stable empty objects to prevent new object creation on every render
+  const walletState = walletStore(
+    useShallow((state: WalletStore) => {
+      const walletId = options?.walletId || state.activeWalletId
+      if (!walletId) {
+        return {
+          addresses: EMPTY_ADDRESSES,
+          walletLoading: EMPTY_WALLET_LOADING,
+        }
       }
-    }
-    return {
-      addresses: state.addresses[walletId] || {},
-      walletLoading: state.walletLoading[walletId] || {},
-    }
-  })
-  const walletState = walletStore(walletSelector)
+      const addresses = state.addresses[walletId]
+      const walletLoading = state.walletLoading[walletId]
+      return {
+        addresses: addresses || EMPTY_ADDRESSES,
+        walletLoading: walletLoading || EMPTY_WALLET_LOADING,
+      }
+    })
+  )
   const isInitialized = workletStore((state: WorkletStore) => state.isInitialized)
 
   // Automatic wallet switching logic
@@ -198,16 +208,23 @@ export function useWallet(options?: {
     }
   }, [options?.walletId, activeWalletId, isSwitchingWallet, switchingToWalletId])
 
+  // useShallow already provides stable references when content doesn't change
+  // We can use walletState.addresses and walletState.walletLoading directly
+  // No need to create new objects - useShallow handles reference stability
+  const addresses = walletState.addresses
+  const walletLoading = walletState.walletLoading
 
   // Get all addresses for a specific network
+  // Use addresses directly from walletState (stable reference from useShallow)
   const getNetworkAddresses = useCallback((network: string) => {
-    return walletState.addresses[network] || {}
-  }, [walletState.addresses])
+    return addresses[network] || {}
+  }, [addresses])
 
   // Check if an address is loading
+  // Use walletLoading directly from walletState (stable reference from useShallow)
   const isLoadingAddress = useCallback((network: string, accountIndex: number = 0) => {
-    return walletState.walletLoading[`${network}-${accountIndex}`] || false
-  }, [walletState.walletLoading])
+    return walletLoading[`${network}-${accountIndex}`] || false
+  }, [walletLoading])
 
   // Get a specific address (from cache or fetch)
   const getAddress = useCallback(async (network: string, accountIndex: number = 0) => {
@@ -226,10 +243,13 @@ export function useWallet(options?: {
     return AccountService.callAccountMethod<T>(network, accountIndex, methodName, args, walletId)
   }, [targetWalletId])
 
-  return {
-    // State (reactive)
-    addresses: walletState.addresses,
-    walletLoading: walletState.walletLoading,
+  // Memoize the entire result object to ensure stable reference
+  // useShallow already provides stable references for addresses and walletLoading
+  // We memoize the result object to prevent creating new objects on every render
+  const result = useMemo(() => ({
+    // State (reactive) - useShallow ensures stable references
+    addresses,
+    walletLoading,
     isInitialized,
     // Switching state
     isSwitchingWallet,
@@ -242,6 +262,20 @@ export function useWallet(options?: {
     // Actions
     getAddress,
     callAccountMethod,
-  }
+  }), [
+    addresses,
+    walletLoading,
+    isInitialized,
+    isSwitchingWallet,
+    switchingToWalletId,
+    switchWalletError,
+    isTemporaryWallet,
+    getNetworkAddresses,
+    isLoadingAddress,
+    getAddress,
+    callAccountMethod,
+  ]);
+
+  return result;
 }
 
