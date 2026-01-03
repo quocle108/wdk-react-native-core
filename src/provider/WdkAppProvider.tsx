@@ -135,6 +135,8 @@ export interface WdkAppProviderProps {
   networkConfigs: NetworkConfigs
   /** Token configurations for balance fetching */
   tokenConfigs: TokenConfigs
+  /** Enable automatic wallet initialization on app restart (default: true) */
+  enableAutoInitialization?: boolean
   /** Child components (app content) */
   children: React.ReactNode
 }
@@ -162,6 +164,7 @@ const queryClient = new QueryClient({
 export function WdkAppProvider({
   networkConfigs,
   tokenConfigs,
+  enableAutoInitialization = true,
   children,
 }: WdkAppProviderProps) {
   // Create secureStorage singleton
@@ -343,6 +346,11 @@ export function WdkAppProvider({
   //
   // All conditions are checked in order with early returns to ensure atomic evaluation.
   useEffect(() => {
+    // EARLY EXIT: Skip automatic wallet initialization if disabled (e.g., when logged out)
+    if (!enableAutoInitialization) {
+      return
+    }
+    
     const currentWalletId = getWalletIdFromLoadingState(walletLoadingState)
     const hasAddresses = !!(walletAddresses && Object.keys(walletAddresses).length > 0)
     
@@ -448,7 +456,7 @@ export function WdkAppProvider({
         error 
       }))
     }
-  }, [activeWalletId, walletLoadingState, walletAddresses, walletManagerError, isWalletInitializing, walletStore, isWorkletStarted, isWorkletInitialized, initializeWallet])
+  }, [enableAutoInitialization, activeWalletId, walletLoadingState, walletAddresses, walletManagerError, isWalletInitializing, walletStore, isWorkletStarted, isWorkletInitialized, initializeWallet])
 
   // Retry initialization
   const retry = useCallback(() => {
