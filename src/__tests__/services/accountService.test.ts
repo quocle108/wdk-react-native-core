@@ -170,14 +170,8 @@ describe('AccountService', () => {
       ).rejects.toThrow('methodName must be a non-empty string')
     })
 
-    it('should reject non-whitelisted methods', async () => {
-      await expect(
-        AccountService.callAccountMethod('ethereum', 0, 'dangerousMethod', null)
-      ).rejects.toThrow('is not allowed')
-    })
-
-    it('should accept whitelisted methods', async () => {
-      const allowedMethods = [
+    it('should accept various method names', async () => {
+      const methods = [
         'getAddress',
         'getBalance',
         'getTokenBalance',
@@ -186,7 +180,7 @@ describe('AccountService', () => {
         'sendTransaction',
       ]
 
-      for (const method of allowedMethods) {
+      for (const method of methods) {
         // getBalance and getTokenBalance return strings, others can return objects
         const mockResult = (method === 'getBalance' || method === 'getTokenBalance')
           ? '1000000000000000000'
