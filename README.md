@@ -350,7 +350,6 @@ interface UseWalletResult {
     methodName: string,
     args?: unknown
   ) => Promise<T>
-  createTemporaryWallet: () => Promise<void>
 }
 ```
 
