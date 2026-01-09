@@ -238,7 +238,6 @@ export function useWallet(options?: {
     }
 
     // Check if all addresses are already loaded
-    const walletState = walletStore.getState()
     const networkConfigs = workletStore.getState().networkConfigs
     if (!networkConfigs) {
       return
@@ -247,7 +246,7 @@ export function useWallet(options?: {
     const networks = Object.keys(networkConfigs)
     const allLoaded = accountIndices.every((accountIndex) => {
       return networks.every((network) => {
-        const address = walletState.addresses[targetWalletId]?.[network]?.[accountIndex]
+        const address = walletState.addresses[network]?.[accountIndex]
         return !!address
       })
     })
@@ -277,6 +276,7 @@ export function useWallet(options?: {
     isInitialized,
     isSwitchingWallet,
     targetWalletId,
+    walletState
   ])
 
   // useShallow already provides stable references when content doesn't change
