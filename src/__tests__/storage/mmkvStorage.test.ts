@@ -1,6 +1,6 @@
 /**
  * Tests for mmkvStorage
- * 
+ *
  * Tests MMKV storage adapter with async initialization and LRU caching
  */
 
@@ -31,7 +31,6 @@ describe('mmkvStorage', () => {
       getString: jest.fn(),
       delete: jest.fn(),
     }
-
     ;(createMMKV as jest.Mock).mockReturnValue(mockMMKVInstance)
     ;(getMMKVKey as jest.Mock).mockResolvedValue('test-encryption-key')
   })
@@ -91,7 +90,9 @@ describe('mmkvStorage', () => {
 
   describe('createMMKVStorageAdapter', () => {
     it('should create storage adapter', async () => {
-      const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+      const { createMMKVStorageAdapter } = await import(
+        '../../storage/mmkvStorage'
+      )
 
       const adapter = createMMKVStorageAdapter('test-identifier')
 
@@ -102,7 +103,9 @@ describe('mmkvStorage', () => {
     })
 
     it('should use default identifier if not provided', async () => {
-      const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+      const { createMMKVStorageAdapter } = await import(
+        '../../storage/mmkvStorage'
+      )
 
       const adapter = createMMKVStorageAdapter()
 
@@ -110,7 +113,9 @@ describe('mmkvStorage', () => {
     })
 
     it('should cache adapters', async () => {
-      const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+      const { createMMKVStorageAdapter } = await import(
+        '../../storage/mmkvStorage'
+      )
 
       const adapter1 = createMMKVStorageAdapter('test-identifier')
       const adapter2 = createMMKVStorageAdapter('test-identifier')
@@ -120,7 +125,9 @@ describe('mmkvStorage', () => {
 
     describe('getItem', () => {
       it('should return value when storage is ready', async () => {
-        const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+        const { createMMKVStorageAdapter } = await import(
+          '../../storage/mmkvStorage'
+        )
 
         mockMMKVInstance.getString.mockReturnValue('test-value')
 
@@ -142,11 +149,16 @@ describe('mmkvStorage', () => {
       })
 
       it('should return null during initialization', async () => {
-        const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+        const { createMMKVStorageAdapter } = await import(
+          '../../storage/mmkvStorage'
+        )
 
         // Delay key resolution to simulate async initialization
         ;(getMMKVKey as jest.Mock).mockImplementation(
-          () => new Promise((resolve) => setTimeout(() => resolve('test-key'), 100))
+          () =>
+            new Promise((resolve) =>
+              setTimeout(() => resolve('test-key'), 100),
+            ),
         )
 
         const adapter = createMMKVStorageAdapter('test-identifier')
@@ -158,7 +170,9 @@ describe('mmkvStorage', () => {
       })
 
       it('should return null on error', async () => {
-        const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+        const { createMMKVStorageAdapter } = await import(
+          '../../storage/mmkvStorage'
+        )
 
         mockMMKVInstance.getString.mockImplementation(() => {
           throw new Error('Read error')
@@ -177,7 +191,9 @@ describe('mmkvStorage', () => {
 
     describe('setItem', () => {
       it('should set value when storage is ready', async () => {
-        const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+        const { createMMKVStorageAdapter } = await import(
+          '../../storage/mmkvStorage'
+        )
 
         const adapter = createMMKVStorageAdapter('test-identifier-set')
 
@@ -190,11 +206,16 @@ describe('mmkvStorage', () => {
         await new Promise((resolve) => setTimeout(resolve, 100))
 
         // setItem should eventually be called (either immediately if ready, or after queued)
-        expect(mockMMKVInstance.set).toHaveBeenCalledWith('test-key', 'test-value')
+        expect(mockMMKVInstance.set).toHaveBeenCalledWith(
+          'test-key',
+          'test-value',
+        )
       })
 
       it('should queue operations during initialization', async () => {
-        const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+        const { createMMKVStorageAdapter } = await import(
+          '../../storage/mmkvStorage'
+        )
 
         // Delay key resolution to simulate async initialization
         let resolveKey: (value: string) => void
@@ -218,13 +239,18 @@ describe('mmkvStorage', () => {
         await new Promise((resolve) => setTimeout(resolve, 100))
 
         // The operation should have been queued and then processed
-        expect(mockMMKVInstance.set).toHaveBeenCalledWith('test-key', 'test-value')
+        expect(mockMMKVInstance.set).toHaveBeenCalledWith(
+          'test-key',
+          'test-value',
+        )
       })
     })
 
     describe('removeItem', () => {
       it('should remove value when storage is ready', async () => {
-        const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+        const { createMMKVStorageAdapter } = await import(
+          '../../storage/mmkvStorage'
+        )
 
         const adapter = createMMKVStorageAdapter('test-identifier-remove')
 
@@ -246,7 +272,9 @@ describe('mmkvStorage', () => {
       })
 
       it('should queue operations during initialization', async () => {
-        const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+        const { createMMKVStorageAdapter } = await import(
+          '../../storage/mmkvStorage'
+        )
 
         // Delay key resolution to simulate async initialization
         let resolveKey: (value: string) => void
@@ -276,7 +304,9 @@ describe('mmkvStorage', () => {
 
     describe('error handling', () => {
       it('should handle initialization errors', async () => {
-        const { createMMKVStorageAdapter } = await import('../../storage/mmkvStorage')
+        const { createMMKVStorageAdapter } = await import(
+          '../../storage/mmkvStorage'
+        )
 
         const error = new Error('Initialization failed')
         ;(getMMKVKey as jest.Mock).mockRejectedValue(error)
@@ -293,4 +323,3 @@ describe('mmkvStorage', () => {
     })
   })
 })
-
