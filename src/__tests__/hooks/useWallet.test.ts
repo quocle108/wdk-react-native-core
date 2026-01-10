@@ -1,6 +1,6 @@
 /**
  * Tests for useWallet hook
- * 
+ *
  * Tests wallet hook logic without React rendering
  */
 
@@ -9,6 +9,7 @@ import { getWalletStore } from '../../store/walletStore'
 import { AddressService } from '../../services/addressService'
 import { AccountService } from '../../services/accountService'
 import { BalanceService } from '../../services/balanceService'
+import { TransactionService } from '../../services/transactionService'
 
 // Mock stores and services
 jest.mock('../../store/workletStore', () => ({
@@ -41,6 +42,23 @@ jest.mock('../../services/balanceService', () => ({
     updateLastBalanceUpdate: jest.fn(),
     getLastBalanceUpdate: jest.fn(),
     clearBalances: jest.fn(),
+  },
+}))
+
+jest.mock('../../services/transactionService', () => ({
+  TransactionService: {
+    updateTransactions: jest.fn(),
+    updateTransactionsFromMap: jest.fn(),
+    getTransactions: jest.fn(),
+    getAllTransactions: jest.fn(),
+    getTransactionMap: jest.fn(),
+    setTransactionLoading: jest.fn(),
+    setAllTransactionsLoading: jest.fn(),
+    isTransactionLoading: jest.fn(),
+    isAnyTransactionLoading: jest.fn(),
+    getLastTransactionUpdate: jest.fn(),
+    clearTransactions: jest.fn(),
+    clearAllTransactions: jest.fn(),
   },
 }))
 
@@ -90,7 +108,7 @@ describe('useWallet', () => {
   it('should call services correctly', () => {
     // Test that the hook calls the correct services
     // Since we can't easily test React hooks in Node, we verify the service calls
-    
+
     const mockAddress = '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0'
     ;(AddressService.getAddress as jest.Mock).mockResolvedValue(mockAddress)
 
@@ -105,6 +123,22 @@ describe('useWallet', () => {
     expect(typeof BalanceService.updateLastBalanceUpdate).toBe('function')
     expect(typeof BalanceService.getLastBalanceUpdate).toBe('function')
     expect(typeof BalanceService.clearBalances).toBe('function')
+  })
+
+  it('should have transaction service methods callable', () => {
+    // Verify transaction service methods are callable
+    expect(typeof TransactionService.updateTransactions).toBe('function')
+    expect(typeof TransactionService.updateTransactionsFromMap).toBe('function')
+    expect(typeof TransactionService.getTransactions).toBe('function')
+    expect(typeof TransactionService.getAllTransactions).toBe('function')
+    expect(typeof TransactionService.getTransactionMap).toBe('function')
+    expect(typeof TransactionService.setTransactionLoading).toBe('function')
+    expect(typeof TransactionService.setAllTransactionsLoading).toBe('function')
+    expect(typeof TransactionService.isTransactionLoading).toBe('function')
+    expect(typeof TransactionService.isAnyTransactionLoading).toBe('function')
+    expect(typeof TransactionService.getLastTransactionUpdate).toBe('function')
+    expect(typeof TransactionService.clearTransactions).toBe('function')
+    expect(typeof TransactionService.clearAllTransactions).toBe('function')
   })
 
   it('should have correct store structure', () => {

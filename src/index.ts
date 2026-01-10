@@ -20,6 +20,13 @@ export type {
   TokenConfigProvider,
   TokenHelpers,
   WalletStore,
+  // Transaction types
+  Transaction,
+  TransactionMap,
+  TransactionsByWallet,
+  TransactionLoadingStates,
+  TransactionFetchResult,
+  TransactionState,
 } from './types'
 
 // HRPC Type Extensions (for extending HRPC functionality)
@@ -79,6 +86,7 @@ export { WorkletLifecycleService } from './services/workletLifecycleService'
 export { AddressService } from './services/addressService'
 export { AccountService } from './services/accountService'
 export { BalanceService } from './services/balanceService'
+export { TransactionService } from './services/transactionService'
 export { WalletSetupService } from './services/walletSetupService'
 export { WalletSwitchingService } from './services/walletSwitchingService'
 

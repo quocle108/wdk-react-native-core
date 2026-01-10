@@ -186,3 +186,89 @@ export interface WalletStore {
   /** Check if the wallet is initialized */
   isWalletInitialized: () => boolean
 }
+
+/**
+ * Transaction
+ *
+ * Represents a single blockchain transaction.
+ * Based on the transaction structure from wdk-react-native-provider.
+ */
+export interface Transaction {
+  /** Blockchain network name (e.g., "ethereum", "polygon") */
+  blockchain: string
+  /** Block number where the transaction was included */
+  blockNumber: number
+  /** Transaction hash */
+  transactionHash: string
+  /** Transfer index within the transaction */
+  transferIndex: number
+  /** Token symbol or address */
+  token: string
+  /** Transaction amount as string (to handle BigInt) */
+  amount: string
+  /** Unix timestamp of the transaction */
+  timestamp: number
+  /** Transaction index within the block */
+  transactionIndex: number
+  /** Log index for event-based transfers */
+  logIndex: number
+  /** Sender address */
+  from: string
+  /** Recipient address */
+  to: string
+}
+
+/**
+ * Transaction Map
+ *
+ * Maps network names to arrays of transactions.
+ * Structure: { [network]: Transaction[] }
+ */
+export type TransactionMap = Partial<Record<string, Transaction[]>>
+
+/**
+ * Transactions by Wallet
+ *
+ * Maps wallet identifiers to their transaction maps.
+ * Structure: { [walletId]: { [network]: Transaction[] } }
+ */
+export type TransactionsByWallet = Record<string, TransactionMap>
+
+/**
+ * Transaction Loading States
+ *
+ * Maps "network" -> boolean
+ * Used to track which networks' transactions are currently being fetched.
+ */
+export type TransactionLoadingStates = Record<string, boolean>
+
+/**
+ * Transaction Fetch Result
+ *
+ * Result of a transaction fetch operation.
+ */
+export interface TransactionFetchResult {
+  /** Whether the fetch was successful */
+  success: boolean
+  /** Network name */
+  network: string
+  /** Array of transactions (null if fetch failed) */
+  transactions: Transaction[] | null
+  /** Error message (only present if success is false) */
+  error?: string
+}
+
+/**
+ * Transaction State
+ *
+ * State object for transactions including list, map, and loading state.
+ * Follows the pattern from wdk-react-native-provider.
+ */
+export interface TransactionState {
+  /** Transactions as a flat list (all networks combined) */
+  list: Transaction[]
+  /** Transactions organized by network */
+  map: TransactionMap
+  /** Whether transactions are currently being fetched */
+  isLoading: boolean
+}

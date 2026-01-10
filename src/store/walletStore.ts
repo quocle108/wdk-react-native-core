@@ -54,6 +54,8 @@ import type {
   WalletAddressesByWallet,
   WalletBalancesByWallet,
   BalanceLoadingStates,
+  TransactionsByWallet,
+  TransactionLoadingStates,
 } from '../types'
 import { createMMKVStorageAdapter } from '../storage/mmkvStorage'
 import { log, logError } from '../utils/logger'
@@ -98,6 +100,11 @@ export interface WalletState {
   // Maps walletId -> "network-accountIndex-tokenAddress" -> boolean
   balanceLoading: Record<string, BalanceLoadingStates>  // walletId -> loading states
   lastBalanceUpdate: Record<string, Record<string, Record<number, number>>>  // walletId -> network -> accountIndex -> timestamp
+  // SOURCE OF TRUTH - transactions stored ONLY here (per-wallet)
+  transactions: TransactionsByWallet  // walletId -> network -> transactions[]
+  // Maps walletId -> network -> boolean
+  transactionLoading: Record<string, TransactionLoadingStates>  // walletId -> loading states
+  lastTransactionUpdate: Record<string, Record<string, number>>  // walletId -> network -> timestamp
   // Account list management (per-wallet)
   accountList: Record<string, AccountInfo[]>  // walletId -> account list
   // Wallet list management
@@ -120,6 +127,9 @@ const initialState: WalletState = {
   balances: {},  // walletId -> balances
   balanceLoading: {},  // walletId -> loading states
   lastBalanceUpdate: {},  // walletId -> network -> accountIndex -> timestamp
+  transactions: {},  // walletId -> network -> transactions[]
+  transactionLoading: {},  // walletId -> network -> loading state
+  lastTransactionUpdate: {},  // walletId -> network -> timestamp
   accountList: {},  // walletId -> account list
   walletList: [],
   activeWalletId: null,
@@ -155,6 +165,9 @@ export function createWalletStore(): WalletStoreInstance {
             balances: state.balances,
             balanceLoading: {},
             lastBalanceUpdate: state.lastBalanceUpdate,
+            transactions: state.transactions,
+            transactionLoading: {},
+            lastTransactionUpdate: state.lastTransactionUpdate,
             accountList: state.accountList,
             walletList: state.walletList,
             activeWalletId: state.activeWalletId,
@@ -166,6 +179,7 @@ export function createWalletStore(): WalletStoreInstance {
                 log('🔄 Rehydrating wallet state - resetting loading states')
                 state.walletLoading = {}
                 state.balanceLoading = {}
+                state.transactionLoading = {}
                 // Reset runtime-only state
                 state.walletLoadingState = { type: 'not_loaded' }
                 state.isOperationInProgress = false

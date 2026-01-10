@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { AccountService } from '../services/accountService'
 import { AddressService } from '../services/addressService'
+import { TransactionService } from '../services/transactionService'
 import { WalletSwitchingService } from '../services/walletSwitchingService'
 import { getWalletStore } from '../store/walletStore'
 import { getWorkletStore } from '../store/workletStore'
@@ -10,10 +11,17 @@ import { isOperationInProgress } from '../utils/operationMutex'
 import { log, logError } from '../utils/logger'
 import type { WalletStore } from '../store/walletStore'
 import type { WorkletStore } from '../store/workletStore'
+import type { Transaction, TransactionMap, TransactionState } from '../types'
 
 // Stable empty objects to prevent creating new objects on every render
 const EMPTY_ADDRESSES = {} as Record<string, Record<number, string>>
 const EMPTY_WALLET_LOADING = {} as Record<string, boolean>
+const EMPTY_TRANSACTION_MAP = {} as TransactionMap
+const EMPTY_TRANSACTIONS: TransactionState = {
+  list: [],
+  map: {},
+  isLoading: false,
+}
 
 /**
  * Check if wallet switching should be skipped
@@ -88,6 +96,8 @@ export interface UseWalletResult {
   addresses: Record<string, Record<number, string>>  // network -> accountIndex -> address (for current wallet)
   walletLoading: Record<string, boolean>  // loading states for current wallet
   isInitialized: boolean
+  // Transaction state (reactive)
+  transactions: TransactionState  // { list, map, isLoading }
   // Switching state
   isSwitchingWallet: boolean
   switchingToWalletId: string | null
@@ -96,6 +106,9 @@ export interface UseWalletResult {
   // Computed helpers
   getNetworkAddresses: (network: string) => Record<number, string>
   isLoadingAddress: (network: string, accountIndex?: number) => boolean
+  // Transaction helpers
+  getTransactionsForNetwork: (network: string) => Transaction[]
+  isLoadingTransactions: (network?: string) => boolean
   // Actions
   getAddress: (network: string, accountIndex?: number) => Promise<string>
   callAccountMethod: <T = unknown>(
@@ -104,6 +117,8 @@ export interface UseWalletResult {
     methodName: string,
     args?: unknown
   ) => Promise<T>
+  // Transaction actions
+  refreshTransactions: (networks?: string[]) => Promise<void>
 }
 
 export function useWallet(options?: {
@@ -135,13 +150,19 @@ export function useWallet(options?: {
         return {
           addresses: EMPTY_ADDRESSES,
           walletLoading: EMPTY_WALLET_LOADING,
+          transactionMap: EMPTY_TRANSACTION_MAP,
+          transactionLoading: {} as Record<string, boolean>,
         }
       }
       const addresses = state.addresses[walletId]
       const walletLoading = state.walletLoading[walletId]
+      const transactionMap = state.transactions[walletId]
+      const transactionLoading = state.transactionLoading[walletId]
       return {
         addresses: addresses || EMPTY_ADDRESSES,
         walletLoading: walletLoading || EMPTY_WALLET_LOADING,
+        transactionMap: transactionMap || EMPTY_TRANSACTION_MAP,
+        transactionLoading: transactionLoading || {},
       }
     })
   )
@@ -213,6 +234,30 @@ export function useWallet(options?: {
   // No need to create new objects - useShallow handles reference stability
   const addresses = walletState.addresses
   const walletLoading = walletState.walletLoading
+  const transactionMap = walletState.transactionMap
+  const transactionLoading = walletState.transactionLoading
+
+  // Derive transactions state object (list, map, isLoading)
+  // Memoized to prevent unnecessary recalculations
+  const transactions: TransactionState = useMemo(() => {
+    // Flatten all transactions from all networks into a single list
+    const allTransactions: Transaction[] = []
+    for (const network of Object.keys(transactionMap)) {
+      const networkTransactions = transactionMap[network] || []
+      allTransactions.push(...networkTransactions)
+    }
+    // Sort by timestamp descending (most recent first)
+    const sortedList = allTransactions.sort((a, b) => b.timestamp - a.timestamp)
+
+    // Check if any network is loading
+    const isLoading = Object.values(transactionLoading).some((loading) => loading)
+
+    return {
+      list: sortedList,
+      map: transactionMap,
+      isLoading,
+    }
+  }, [transactionMap, transactionLoading])
 
   // Get all addresses for a specific network
   // Use addresses directly from walletState (stable reference from useShallow)
@@ -225,6 +270,20 @@ export function useWallet(options?: {
   const isLoadingAddress = useCallback((network: string, accountIndex: number = 0) => {
     return walletLoading[`${network}-${accountIndex}`] || false
   }, [walletLoading])
+
+  // Get transactions for a specific network
+  const getTransactionsForNetwork = useCallback((network: string): Transaction[] => {
+    return transactionMap[network] || []
+  }, [transactionMap])
+
+  // Check if transactions are loading (optionally for a specific network)
+  const isLoadingTransactions = useCallback((network?: string): boolean => {
+    if (network) {
+      return transactionLoading[network] || false
+    }
+    // Check if any network is loading
+    return Object.values(transactionLoading).some((loading) => loading)
+  }, [transactionLoading])
 
   // Get a specific address (from cache or fetch)
   const getAddress = useCallback(async (network: string, accountIndex: number = 0) => {
@@ -243,6 +302,71 @@ export function useWallet(options?: {
     return AccountService.callAccountMethod<T>(network, accountIndex, methodName, args, walletId)
   }, [targetWalletId])
 
+  // Refresh transactions for specified networks (or all if not specified)
+  // This fetches fresh transaction data from the worklet/indexer
+  const refreshTransactions = useCallback(async (networks?: string[]): Promise<void> => {
+    const walletId = targetWalletId || '__temporary__'
+
+    log(`[useWallet] Refreshing transactions for wallet: ${walletId}`)
+
+    // Set loading state
+    if (networks && networks.length > 0) {
+      for (const network of networks) {
+        TransactionService.setTransactionLoading(network, true, walletId)
+      }
+    } else {
+      TransactionService.setAllTransactionsLoading(true, walletId)
+    }
+
+    try {
+      // Get addresses for the wallet to fetch transactions
+      const walletAddresses = addresses
+
+      // For each network, fetch transactions
+      const networksToFetch = networks || Object.keys(walletAddresses)
+
+      for (const network of networksToFetch) {
+        try {
+          const networkAddresses = walletAddresses[network]
+          if (!networkAddresses) {
+            log(`[useWallet] No addresses found for network: ${network}`)
+            continue
+          }
+
+          // Get the first account address (account index 0) for fetching transactions
+          const address = networkAddresses[0]
+          if (!address) {
+            log(`[useWallet] No address found for network ${network} at account index 0`)
+            continue
+          }
+
+          // Call the worklet to get transactions
+          // Using account method 'getTransactions' which should be implemented in the worklet
+          const txns = await AccountService.callAccountMethod<Transaction[]>(
+            network,
+            0,
+            'getTransactions',
+            { address, limit: 100 },
+            walletId
+          )
+
+          // Update the store with fetched transactions
+          TransactionService.updateTransactions(network, txns || [], walletId)
+        } catch (error) {
+          logError(`[useWallet] Failed to fetch transactions for network ${network}:`, error)
+          // Continue with other networks even if one fails
+        } finally {
+          TransactionService.setTransactionLoading(network, false, walletId)
+        }
+      }
+    } catch (error) {
+      logError('[useWallet] Failed to refresh transactions:', error)
+    } finally {
+      // Clear all loading states
+      TransactionService.setAllTransactionsLoading(false, walletId)
+    }
+  }, [targetWalletId, addresses])
+
   // Memoize the entire result object to ensure stable reference
   // useShallow already provides stable references for addresses and walletLoading
   // We memoize the result object to prevent creating new objects on every render
@@ -251,6 +375,8 @@ export function useWallet(options?: {
     addresses,
     walletLoading,
     isInitialized,
+    // Transaction state (reactive)
+    transactions,
     // Switching state
     isSwitchingWallet,
     switchingToWalletId,
@@ -259,21 +385,30 @@ export function useWallet(options?: {
     // Computed helpers
     getNetworkAddresses,
     isLoadingAddress,
+    // Transaction helpers
+    getTransactionsForNetwork,
+    isLoadingTransactions,
     // Actions
     getAddress,
     callAccountMethod,
+    // Transaction actions
+    refreshTransactions,
   }), [
     addresses,
     walletLoading,
     isInitialized,
+    transactions,
     isSwitchingWallet,
     switchingToWalletId,
     switchWalletError,
     isTemporaryWallet,
     getNetworkAddresses,
     isLoadingAddress,
+    getTransactionsForNetwork,
+    isLoadingTransactions,
     getAddress,
     callAccountMethod,
+    refreshTransactions,
   ]);
 
   return result;
