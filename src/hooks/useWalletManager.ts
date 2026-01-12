@@ -1,58 +1,58 @@
 /**
  * Wallet Manager Hook
- * 
+ *
  * Consolidated hook for wallet setup, initialization, and lifecycle management.
  * This is the ONLY hook for wallet lifecycle operations.
- * 
+ *
  * PURPOSE: Use this hook for wallet setup/auth flows (creating new wallets,
  * loading existing wallets, checking if wallet exists, deleting wallets, getting mnemonic).
- * 
+ *
  * When to use which hook:
  * - **App initialization state**: Use `useWdkApp()` to check if app is ready
  * - **Wallet lifecycle** (create, load, import, delete): Use this hook (`useWalletManager()`)
  * - **Wallet operations** (addresses, account methods): Use `useWallet()` AFTER initialization
  * - **Balance fetching**: Use `useBalance()` hook with TanStack Query
- * 
+ *
  * **Wallet Switching**: Use `useWallet({ walletId })` to switch wallets.
- * 
+ *
  * @example
  * ```tsx
  * // Check if app is ready first
  * const { isReady } = useWdkApp()
- * 
+ *
  * // Then use wallet manager for lifecycle operations
  * // networkConfigs is optional - it will be retrieved from workletStore if not provided
- * const { 
+ * const {
  *   createWallet,
  *   initializeWallet,
  *   initializeFromMnemonic,
- *   hasWallet, 
- *   deleteWallet, 
+ *   hasWallet,
+ *   deleteWallet,
  *   getMnemonic,
  *   createTemporaryWallet,
- *   isInitializing, 
- *   error 
+ *   isInitializing,
+ *   error
  * } = useWalletManager('user@example.com')
- * 
+ *
  * // Create new wallet (persistent, requires biometrics)
  * // networkConfigs can be passed here or retrieved from store
  * await createWallet('user@example.com', networkConfigs)
- * 
+ *
  * // Initialize wallet (create new or load existing)
  * await initializeWallet({ createNew: true })
- * 
+ *
  * // Load existing wallet (requires biometric authentication)
  * await initializeWallet({ createNew: false })
- * 
+ *
  * // Import from mnemonic
  * await initializeFromMnemonic('word1 word2 ... word12')
- * 
+ *
  * // Create temporary wallet for previewing addresses (no biometrics, not saved)
  * await createTemporaryWallet()
- * 
+ *
  * // Get mnemonic (requires biometric authentication if not cached)
  * const mnemonic = await getMnemonic()
- * 
+ *
  * // Delete wallet
  * await deleteWallet()
  * ```
@@ -65,7 +65,11 @@ import { WalletSetupService } from '../services/walletSetupService'
 import { WorkletLifecycleService } from '../services/workletLifecycleService'
 import { getWalletStore } from '../store/walletStore'
 import { getWorkletStore } from '../store/workletStore'
-import { updateWalletLoadingState, isWalletLoadingState, getWalletIdFromLoadingState } from '../store/walletStore'
+import {
+  updateWalletLoadingState,
+  isWalletLoadingState,
+  getWalletIdFromLoadingState,
+} from '../store/walletStore'
 import { withOperationMutex } from '../utils/operationMutex'
 import { log, logError } from '../utils/logger'
 import type { NetworkConfigs } from '../types'
@@ -76,7 +80,10 @@ export type { WalletInfo }
 
 export interface UseWalletManagerResult {
   /** Initialize wallet - either create new or load existing */
-  initializeWallet: (options?: { createNew?: boolean; walletId?: string }) => Promise<void>
+  initializeWallet: (options?: {
+    createNew?: boolean
+    walletId?: string
+  }) => Promise<void>
   /** Initialize wallet from mnemonic seedphrase */
   initializeFromMnemonic: (mnemonic: string, walletId?: string) => Promise<void>
   /** Check if wallet exists */
@@ -87,7 +94,7 @@ export interface UseWalletManagerResult {
   getMnemonic: (walletId?: string) => Promise<string | null>
   /** Create a temporary wallet for previewing addresses (no biometrics, not saved) */
   createTemporaryWallet: () => Promise<void>
-  /** 
+  /**
    * Get encryption key from cache or secure storage
    * Requires biometric authentication if not cached
    * @param walletId - Optional walletId override (defaults to hook's walletId)
@@ -109,7 +116,9 @@ export interface UseWalletManagerResult {
    * @param walletId - Optional walletId override (defaults to hook's walletId)
    * @returns Credentials object with encryptionKey and encryptedSeed
    */
-  loadExistingWallet: (walletId?: string) => Promise<{ encryptionKey: string; encryptedSeed: string }>
+  loadExistingWallet: (
+    walletId?: string,
+  ) => Promise<{ encryptionKey: string; encryptedSeed: string }>
   /** Whether initialization is in progress */
   isInitializing: boolean
   /** Error message if any */
@@ -124,7 +133,10 @@ export interface UseWalletManagerResult {
   /** Currently active wallet identifier */
   activeWalletId: string | null
   /** Create a new wallet with the given walletId (adds to list) */
-  createWallet: (walletId: string, networkConfigs?: NetworkConfigs) => Promise<void>
+  createWallet: (
+    walletId: string,
+    networkConfigs?: NetworkConfigs,
+  ) => Promise<void>
   /** Refresh the wallet list */
   refreshWalletList: (knownIdentifiers?: string[]) => Promise<void>
   /** Whether wallet list operation is in progress */
@@ -135,14 +147,14 @@ export interface UseWalletManagerResult {
 
 export function useWalletManager(
   walletId?: string,
-  networkConfigs?: NetworkConfigs
+  networkConfigs?: NetworkConfigs,
 ): UseWalletManagerResult {
   const [error, setError] = useState<string | null>(null)
-  
+
   // Local loading and error state for wallet list operations (ephemeral, only used in this hook)
   const [isWalletListLoading, setIsWalletListLoading] = useState(false)
   const [walletListError, setWalletListError] = useState<string | null>(null)
-  
+
   const walletStore = getWalletStore()
   const workletStore = getWorkletStore()
 
@@ -153,24 +165,24 @@ export function useWalletManager(
   const getNetworkConfigs = useCallback((): NetworkConfigs => {
     const networkConfigsFromStore = workletStore.getState().networkConfigs
     const effectiveNetworkConfigs = networkConfigs ?? networkConfigsFromStore
-    
+
     if (!effectiveNetworkConfigs) {
       throw new Error(
-        'networkConfigs is required. Either provide it as a parameter or ensure the worklet is started with networkConfigs.'
+        'networkConfigs is required. Either provide it as a parameter or ensure the worklet is started with networkConfigs.',
       )
     }
-    
+
     return effectiveNetworkConfigs
   }, [networkConfigs])
   // Note: workletStore removed from deps - it's a singleton that never changes
 
   // Subscribe to wallet list state and loading state from Zustand
   const walletListState = walletStore(
-    useShallow((state: import('../store/walletStore').WalletStore) => ({
+    useShallow((state) => ({
       wallets: state.walletList,
       activeWalletId: state.activeWalletId,
       walletLoadingState: state.walletLoadingState,
-    }))
+    })),
   )
 
   // Derive isInitializing from walletLoadingState (single source of truth)
@@ -179,17 +191,25 @@ export function useWalletManager(
     const loadingState = walletListState.walletLoadingState
     const currentWalletId = walletId || walletListState.activeWalletId
     const loadingWalletId = getWalletIdFromLoadingState(loadingState)
-    
+
     // Only consider it initializing if:
     // 1. The loading state indicates loading/checking
     // 2. The walletId matches (or no walletId specified, meaning we're tracking active wallet)
-    return isWalletLoadingState(loadingState) && 
-           (currentWalletId === null || currentWalletId === loadingWalletId || walletId === undefined)
-  }, [walletListState.walletLoadingState, walletId, walletListState.activeWalletId])
+    return (
+      isWalletLoadingState(loadingState) &&
+      (currentWalletId === null ||
+        currentWalletId === loadingWalletId ||
+        walletId === undefined)
+    )
+  }, [
+    walletListState.walletLoadingState,
+    walletId,
+    walletListState.activeWalletId,
+  ])
 
   /**
    * Initialize wallet - either create new or load existing
-   * 
+   *
    * @param options - Wallet initialization options
    * @param options.createNew - If true, creates a new wallet; if false, loads existing wallet
    * @param options.walletId - Optional walletId override (defaults to hook's walletId)
@@ -206,28 +226,33 @@ export function useWalletManager(
         // This prevents unnecessary initialization calls when the wallet is already loaded
         if (targetWalletId) {
           const currentWalletState = walletStore.getState().walletLoadingState
-          if (currentWalletState.type === 'ready' && currentWalletState.identifier === targetWalletId) {
-            log('[useWalletManager] Wallet already ready - skipping initialization', { targetWalletId })
+          if (
+            currentWalletState.type === 'ready' &&
+            currentWalletState.identifier === targetWalletId
+          ) {
+            log(
+              '[useWalletManager] Wallet already ready - skipping initialization',
+              { targetWalletId },
+            )
             return
           }
         }
 
         // Update loading state in store (single source of truth)
         if (targetWalletId) {
-          walletStore.setState((prev) => updateWalletLoadingState(prev, {
-            type: 'loading',
-            identifier: targetWalletId,
-            walletExists: true,
-          }))
+          walletStore.setState((prev) =>
+            updateWalletLoadingState(prev, {
+              type: 'loading',
+              identifier: targetWalletId,
+              walletExists: true,
+            }),
+          )
         }
 
-        await WalletSetupService.initializeWallet(
-          effectiveNetworkConfigs,
-          {
-            ...options,
-            walletId: targetWalletId,
-          }
-        )
+        await WalletSetupService.initializeWallet(effectiveNetworkConfigs, {
+          ...options,
+          walletId: targetWalletId,
+        })
 
         // Mark as ready on success
         // Wallet is ready when initializeWDK() completes successfully, even if addresses don't exist yet
@@ -237,14 +262,19 @@ export function useWalletManager(
           walletStore.setState((prev) => {
             const currentState = prev.walletLoadingState
             const addresses = prev.addresses[targetWalletId]
-            const hasAddresses = !!(addresses && Object.keys(addresses).length > 0)
-            
+            const hasAddresses = !!(
+              addresses && Object.keys(addresses).length > 0
+            )
+
             // If addresses exist, we can set to ready if state allows it
             // WdkAppProvider will also handle transitions when addresses appear
             if (hasAddresses) {
               // Only set to ready if current state allows the transition
               // Valid transitions to ready: from 'loading' or 'checking'
-              if (currentState.type === 'loading' || currentState.type === 'checking') {
+              if (
+                currentState.type === 'loading' ||
+                currentState.type === 'checking'
+              ) {
                 const readyStateUpdate = updateWalletLoadingState(prev, {
                   type: 'ready',
                   identifier: targetWalletId,
@@ -259,11 +289,14 @@ export function useWalletManager(
               // If state is already 'ready', don't change it
               return prev
             }
-            
+
             // If no addresses yet, set to ready if state is 'loading' or 'checking' (normal case)
             // The wallet is ready when WDK is initialized with correct credentials, addresses can be fetched lazily
             // Note: Cannot transition from 'not_loaded' directly to 'ready' - must go through 'loading' first
-            if (currentState.type === 'loading' || currentState.type === 'checking') {
+            if (
+              currentState.type === 'loading' ||
+              currentState.type === 'checking'
+            ) {
               const readyStateUpdate = updateWalletLoadingState(prev, {
                 type: 'ready',
                 identifier: targetWalletId,
@@ -278,10 +311,13 @@ export function useWalletManager(
               // We need to transition through 'loading' first, then 'ready'
               // Since initializeWDK() already completed successfully, we can do both transitions
               // in sequence within the same setState call
-              log('[useWalletManager] State reset to not_loaded, transitioning through loading to ready', {
-                targetWalletId,
-                hasAddresses,
-              })
+              log(
+                '[useWalletManager] State reset to not_loaded, transitioning through loading to ready',
+                {
+                  targetWalletId,
+                  hasAddresses,
+                },
+              )
               // First transition: not_loaded -> loading
               const loadingStateUpdate = updateWalletLoadingState(prev, {
                 type: 'loading',
@@ -294,7 +330,7 @@ export function useWalletManager(
                 {
                   type: 'ready',
                   identifier: targetWalletId,
-                }
+                },
               )
               // Also set activeWalletId to prevent WdkAppProvider from resetting state
               return {
@@ -303,40 +339,44 @@ export function useWalletManager(
               }
             } else {
               // State is 'ready' or 'error' - don't change it
-              log('[useWalletManager] Wallet already in final state, not changing', {
-                currentState: currentState.type,
-                targetWalletId,
-                hasAddresses,
-              })
+              log(
+                '[useWalletManager] Wallet already in final state, not changing',
+                {
+                  currentState: currentState.type,
+                  targetWalletId,
+                  hasAddresses,
+                },
+              )
               return prev
             }
           })
         }
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : String(err)
+        const errorMessage = err instanceof Error ? err.message : String(err)
         const errorObj = err instanceof Error ? err : new Error(String(err))
         logError('Failed to initialize wallet:', err)
         setError(errorMessage)
-        
+
         // Cleanup state on error
         if (targetWalletId) {
-          walletStore.setState((prev) => updateWalletLoadingState(prev, {
-            type: 'error',
-            identifier: targetWalletId,
-            error: errorObj,
-          }))
+          walletStore.setState((prev) =>
+            updateWalletLoadingState(prev, {
+              type: 'error',
+              identifier: targetWalletId,
+              error: errorObj,
+            }),
+          )
         }
-        
+
         throw err
       }
     },
-    [getNetworkConfigs, walletId]
+    [getNetworkConfigs, walletId],
   )
 
   /**
    * Check if wallet exists
-   * 
+   *
    * @param walletId - Optional walletId override (defaults to hook's walletId)
    * @returns Promise resolving to true if wallet exists, false otherwise
    */
@@ -344,12 +384,12 @@ export function useWalletManager(
     async (walletIdParam?: string): Promise<boolean> => {
       return WalletSetupService.hasWallet(walletIdParam ?? walletId)
     },
-    [walletId]
+    [walletId],
   )
 
   /**
    * Initialize wallet from mnemonic seedphrase
-   * 
+   *
    * @param mnemonic - Mnemonic phrase to import
    * @param walletId - Optional walletId override (defaults to hook's walletId)
    */
@@ -363,51 +403,56 @@ export function useWalletManager(
       try {
         // Update loading state in store (single source of truth)
         if (targetWalletId) {
-          walletStore.setState((prev) => updateWalletLoadingState(prev, {
-            type: 'loading',
-            identifier: targetWalletId,
-            walletExists: false, // New wallet from mnemonic
-          }))
+          walletStore.setState((prev) =>
+            updateWalletLoadingState(prev, {
+              type: 'loading',
+              identifier: targetWalletId,
+              walletExists: false, // New wallet from mnemonic
+            }),
+          )
         }
 
         await WalletSetupService.initializeFromMnemonic(
           effectiveNetworkConfigs,
           mnemonic,
-          targetWalletId
+          targetWalletId,
         )
 
         // Mark as ready on success
         if (targetWalletId) {
-          walletStore.setState((prev) => updateWalletLoadingState(prev, {
-            type: 'ready',
-            identifier: targetWalletId,
-          }))
+          walletStore.setState((prev) =>
+            updateWalletLoadingState(prev, {
+              type: 'ready',
+              identifier: targetWalletId,
+            }),
+          )
         }
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : String(err)
+        const errorMessage = err instanceof Error ? err.message : String(err)
         const errorObj = err instanceof Error ? err : new Error(String(err))
         logError('Failed to initialize wallet from mnemonic:', err)
         setError(errorMessage)
-        
+
         // Cleanup state on error
         if (targetWalletId) {
-          walletStore.setState((prev) => updateWalletLoadingState(prev, {
-            type: 'error',
-            identifier: targetWalletId,
-            error: errorObj,
-          }))
+          walletStore.setState((prev) =>
+            updateWalletLoadingState(prev, {
+              type: 'error',
+              identifier: targetWalletId,
+              error: errorObj,
+            }),
+          )
         }
-        
+
         throw err
       }
     },
-    [getNetworkConfigs, walletId]
+    [getNetworkConfigs, walletId],
   )
 
   /**
    * Delete wallet
-   * 
+   *
    * @param walletId - Optional walletId override (defaults to hook's walletId)
    *                  If not provided, deletes the default wallet
    */
@@ -420,13 +465,13 @@ export function useWalletManager(
         if (!targetWalletId) {
           throw new Error('Wallet ID is required for deletion')
         }
-        
+
         await WalletSetupService.deleteWallet(targetWalletId)
 
         // Remove from wallet list and clear all wallet-specific data
-        walletStore.setState((state: import('../store/walletStore').WalletStore) => {
+        walletStore.setState((state) => {
           const wasActive = state.activeWalletId === targetWalletId
-          
+
           // Clear all wallet-specific data (only if walletId exists)
           const remainingAddresses = { ...state.addresses }
           const remainingBalances = { ...state.balances }
@@ -434,19 +479,23 @@ export function useWalletManager(
           const remainingLastBalanceUpdate = { ...state.lastBalanceUpdate }
           const remainingWalletLoading = { ...state.walletLoading }
           const remainingBalanceLoading = { ...state.balanceLoading }
-          
+
           delete remainingAddresses[targetWalletId]
           delete remainingBalances[targetWalletId]
           delete remainingAccountList[targetWalletId]
           delete remainingLastBalanceUpdate[targetWalletId]
           delete remainingWalletLoading[targetWalletId]
           delete remainingBalanceLoading[targetWalletId]
-          
+
           return {
-            walletList: state.walletList.filter((w: import('../store/walletStore').WalletInfo) => w.identifier !== targetWalletId),
+            walletList: state.walletList.filter(
+              (w: WalletInfo) => w.identifier !== targetWalletId,
+            ),
             activeWalletId: wasActive ? null : state.activeWalletId,
             // Reset loading state if this was the active wallet
-            walletLoadingState: wasActive ? { type: 'not_loaded' } : state.walletLoadingState,
+            walletLoadingState: wasActive
+              ? { type: 'not_loaded' }
+              : state.walletLoadingState,
             // Clear all wallet-specific data
             addresses: remainingAddresses,
             balances: remainingBalances,
@@ -456,23 +505,24 @@ export function useWalletManager(
             balanceLoading: remainingBalanceLoading,
           }
         })
-        
-        log(`[useWalletManager] Deleted wallet and cleared all data: ${targetWalletId}`)
+
+        log(
+          `[useWalletManager] Deleted wallet and cleared all data: ${targetWalletId}`,
+        )
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : String(err)
+        const errorMessage = err instanceof Error ? err.message : String(err)
         logError('Failed to delete wallet:', err)
         setError(errorMessage)
         throw err
       }
     },
-    [walletId]
+    [walletId],
   )
 
   /**
    * Get mnemonic phrase from wallet
    * Requires biometric authentication if credentials are not cached
-   * 
+   *
    * @param walletId - Optional walletId override (defaults to hook's walletId)
    * @returns Promise resolving to mnemonic phrase or null if not found
    */
@@ -481,87 +531,96 @@ export function useWalletManager(
       try {
         return await WalletSetupService.getMnemonic(walletIdParam ?? walletId)
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : String(err)
+        const errorMessage = err instanceof Error ? err.message : String(err)
         logError('Failed to get mnemonic:', err)
         throw err
       }
     },
-    [walletId]
+    [walletId],
   )
 
   /**
    * Get encryption key from cache or secure storage
    * Requires biometric authentication if not cached
-   * 
+   *
    * @param walletId - Optional walletId override (defaults to hook's walletId)
    * @returns Promise resolving to encryption key or null if not found
    */
   const getEncryptionKey = useCallback(
     async (walletIdParam?: string): Promise<string | null> => {
       try {
-        return await WalletSetupService.getEncryptionKey(walletIdParam ?? walletId)
+        return await WalletSetupService.getEncryptionKey(
+          walletIdParam ?? walletId,
+        )
       } catch (err) {
         logError('Failed to get encryption key:', err)
         throw err
       }
     },
-    [walletId]
+    [walletId],
   )
 
   /**
    * Get encrypted seed from cache or secure storage (no biometrics required)
-   * 
+   *
    * @param walletId - Optional walletId override (defaults to hook's walletId)
    * @returns Promise resolving to encrypted seed or null if not found
    */
   const getEncryptedSeed = useCallback(
     async (walletIdParam?: string): Promise<string | null> => {
       try {
-        return await WalletSetupService.getEncryptedSeed(walletIdParam ?? walletId)
+        return await WalletSetupService.getEncryptedSeed(
+          walletIdParam ?? walletId,
+        )
       } catch (err) {
         logError('Failed to get encrypted seed:', err)
         throw err
       }
     },
-    [walletId]
+    [walletId],
   )
 
   /**
    * Get encrypted entropy from cache or secure storage (no biometrics required)
-   * 
+   *
    * @param walletId - Optional walletId override (defaults to hook's walletId)
    * @returns Promise resolving to encrypted entropy or null if not found
    */
   const getEncryptedEntropy = useCallback(
     async (walletIdParam?: string): Promise<string | null> => {
       try {
-        return await WalletSetupService.getEncryptedEntropy(walletIdParam ?? walletId)
+        return await WalletSetupService.getEncryptedEntropy(
+          walletIdParam ?? walletId,
+        )
       } catch (err) {
         logError('Failed to get encrypted entropy:', err)
         throw err
       }
     },
-    [walletId]
+    [walletId],
   )
 
   /**
    * Load existing wallet credentials from secure storage
    * Requires biometric authentication if not cached
-   * 
+   *
    * @param walletId - Optional walletId override (defaults to hook's walletId)
    * @returns Promise resolving to credentials object with encryptionKey and encryptedSeed
    */
   const loadExistingWallet = useCallback(
-    async (walletIdParam?: string): Promise<{ encryptionKey: string; encryptedSeed: string }> => {
+    async (
+      walletIdParam?: string,
+    ): Promise<{ encryptionKey: string; encryptedSeed: string }> => {
       try {
-        return await WalletSetupService.loadExistingWallet(walletIdParam ?? walletId)
+        return await WalletSetupService.loadExistingWallet(
+          walletIdParam ?? walletId,
+        )
       } catch (err) {
         logError('Failed to load existing wallet:', err)
         throw err
       }
     },
-    [walletId]
+    [walletId],
   )
 
   /**
@@ -595,7 +654,7 @@ export function useWalletManager(
         // Ensure worklet is started (auto-start if needed)
         await WorkletLifecycleService.ensureWorkletStarted(
           effectiveNetworkConfigs,
-          { autoStart: true }
+          { autoStart: true },
         )
 
         // Generate entropy and encrypt (no biometrics, no keychain save)
@@ -623,89 +682,110 @@ export function useWalletManager(
   /**
    * Check if a wallet exists (for wallet list operations)
    */
-  const checkWallet = useCallback(async (walletId: string): Promise<boolean> => {
-    try {
-      return await WalletSetupService.hasWallet(walletId)
-    } catch (err) {
-      logError('Failed to check wallet:', err)
-      return false
-    }
-  }, [])
+  const checkWallet = useCallback(
+    async (walletId: string): Promise<boolean> => {
+      try {
+        return await WalletSetupService.hasWallet(walletId)
+      } catch (err) {
+        logError('Failed to check wallet:', err)
+        return false
+      }
+    },
+    [],
+  )
 
   /**
    * Refresh the wallet list
    */
-  const refreshWalletList = useCallback(async (knownIdentifiers?: string[]) => {
-    setIsWalletListLoading(true)
-    setWalletListError(null)
+  const refreshWalletList = useCallback(
+    async (knownIdentifiers?: string[]) => {
+      setIsWalletListLoading(true)
+      setWalletListError(null)
 
-    try {
-      const identifiersToCheck = knownIdentifiers || []
-      const currentActiveId = walletStore.getState().activeWalletId
-      
-      // If no known identifiers provided, check default wallet
-      if (identifiersToCheck.length === 0) {
-        const defaultExists = await checkWallet('default')
-        walletStore.setState({
-          walletList: [{ identifier: 'default', exists: defaultExists, isActive: currentActiveId === 'default' }],
-        })
-      } else {
+      try {
+        const identifiersToCheck = knownIdentifiers || []
+        const { activeWalletId: currentActiveId } = walletStore.getState()
+
+        // If no known identifiers provided, check default wallet
+        if (identifiersToCheck.length === 0) {
+          const defaultExists = await checkWallet('default')
+          return walletStore.setState({
+            walletList: [
+              {
+                identifier: 'default',
+                exists: defaultExists,
+                isActive: currentActiveId === 'default',
+              },
+            ],
+          })
+        }
+
         // Check all known identifiers
         const walletChecks = await Promise.all(
           identifiersToCheck.map(async (id) => ({
             identifier: id,
             exists: await checkWallet(id),
             isActive: currentActiveId === id,
-          }))
+          })),
         )
-        walletStore.setState({ walletList: walletChecks })
+        return walletStore.setState({ walletList: walletChecks })
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        logError('Failed to refresh wallet list:', err)
+        setWalletListError(errorMessage)
+      } finally {
+        setIsWalletListLoading(false)
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      logError('Failed to refresh wallet list:', err)
-      setWalletListError(errorMessage)
-    } finally {
-      setIsWalletListLoading(false)
-    }
-  }, [checkWallet])
-
+    },
+    [checkWallet],
+  )
 
   /**
    * Create a new wallet and add it to the wallet list
    */
-  const createWallet = useCallback(async (walletId: string, walletNetworkConfigs?: NetworkConfigs) => {
-    setIsWalletListLoading(true)
-    setWalletListError(null)
+  const createWallet = useCallback(
+    async (walletId: string, walletNetworkConfigs?: NetworkConfigs) => {
+      setIsWalletListLoading(true)
+      setWalletListError(null)
 
-    try {
-      // Check if wallet already exists
-      const exists = await checkWallet(walletId)
-      if (exists) {
-        throw new Error(`Wallet with walletId "${walletId}" already exists`)
+      try {
+        // Check if wallet already exists
+        const exists = await checkWallet(walletId)
+        if (exists) {
+          throw new Error(`Wallet with walletId "${walletId}" already exists`)
+        }
+
+        // Use provided networkConfigs or get from store
+        const effectiveNetworkConfigs =
+          walletNetworkConfigs ?? getNetworkConfigs()
+
+        // Create wallet using WalletSetupService
+        await WalletSetupService.createNewWallet(
+          effectiveNetworkConfigs,
+          walletId,
+        )
+
+        // Add to wallet list and set as active wallet
+        walletStore.setState((state) => ({
+          walletList: [
+            ...state.walletList,
+            { identifier: walletId, exists: true, isActive: true },
+          ],
+          activeWalletId: walletId, // Set as active wallet so WdkAppProvider can auto-initialize on restart
+        }))
+
+        log(`Created new wallet: ${walletId} and set as active`)
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        logError('Failed to create wallet:', err)
+        setWalletListError(errorMessage)
+        throw err
+      } finally {
+        setIsWalletListLoading(false)
       }
-
-      // Use provided networkConfigs or get from store
-      const effectiveNetworkConfigs = walletNetworkConfigs ?? getNetworkConfigs()
-
-      // Create wallet using WalletSetupService
-      await WalletSetupService.createNewWallet(effectiveNetworkConfigs, walletId)
-
-      // Add to wallet list and set as active wallet
-      walletStore.setState((state: import('../store/walletStore').WalletStore) => ({
-        walletList: [...state.walletList, { identifier: walletId, exists: true, isActive: true }],
-        activeWalletId: walletId, // Set as active wallet so WdkAppProvider can auto-initialize on restart
-      }))
-
-      log(`Created new wallet: ${walletId} and set as active`)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      logError('Failed to create wallet:', err)
-      setWalletListError(errorMessage)
-      throw err
-    } finally {
-      setIsWalletListLoading(false)
-    }
-  }, [checkWallet])
+    },
+    [checkWallet],
+  )
 
   // Memoize return object to prevent unnecessary re-renders
   return useMemo(
@@ -753,7 +833,6 @@ export function useWalletManager(
       refreshWalletList,
       isWalletListLoading,
       walletListError,
-    ]
+    ],
   )
 }
-
