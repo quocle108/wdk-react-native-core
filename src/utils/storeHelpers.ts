@@ -62,13 +62,17 @@ export function isInitialized(): boolean {
 /**
  * Update balance in wallet state (helper for nested state updates)
  * 
+ * IMPORTANT: This function checks if the balance actually changed before creating
+ * new object references. This prevents unnecessary re-renders in components using
+ * useShallow selectors when the same balance is re-fetched.
+ * 
  * @param prev - Previous wallet state
  * @param walletId - Wallet identifier
  * @param network - Network name
  * @param accountIndex - Account index
  * @param tokenKey - Token key (address or 'native')
  * @param balance - Balance value
- * @returns Partial state update
+ * @returns Partial state update (returns prev.balances if no change)
  */
 export function updateBalanceInState(
   prev: WalletState,
@@ -81,6 +85,14 @@ export function updateBalanceInState(
   const walletBalances = prev.balances[walletId] || {}
   const networkBalances = walletBalances[network] || {}
   const accountBalances = networkBalances[accountIndex] || {}
+  
+  // Check if balance actually changed - avoid creating new references if not
+  const existingBalance = accountBalances[tokenKey]
+  if (existingBalance === balance) {
+    // Return existing state to preserve object references
+    return { balances: prev.balances }
+  }
+  
   return {
     balances: {
       ...prev.balances,
@@ -101,12 +113,16 @@ export function updateBalanceInState(
 /**
  * Update address in wallet state (helper for nested state updates)
  * 
+ * IMPORTANT: This function checks if the address actually changed before creating
+ * new object references. This prevents unnecessary re-renders in components using
+ * useShallow selectors when the same address is re-fetched.
+ * 
  * @param prev - Previous wallet state
  * @param walletId - Wallet identifier
  * @param network - Network name
  * @param accountIndex - Account index
  * @param address - Address value
- * @returns Partial state update
+ * @returns Partial state update (returns prev.addresses if no change)
  */
 export function updateAddressInState(
   prev: WalletState,
@@ -117,6 +133,14 @@ export function updateAddressInState(
 ): Partial<WalletState> {
   const walletAddresses = prev.addresses[walletId] || {}
   const networkAddresses = walletAddresses[network] || {}
+  
+  // Check if address actually changed - avoid creating new references if not
+  const existingAddress = networkAddresses[accountIndex]
+  if (existingAddress === address) {
+    // Return existing state to preserve object references
+    return { addresses: prev.addresses }
+  }
+  
   return {
     addresses: {
       ...prev.addresses,
