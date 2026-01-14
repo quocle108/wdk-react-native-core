@@ -590,13 +590,8 @@ export function useWalletManager(
       setError(null)
 
       try {
-        const effectiveNetworkConfigs = getNetworkConfigs()
-
-        // Ensure worklet is started (auto-start if needed)
-        await WorkletLifecycleService.ensureWorkletStarted(
-          effectiveNetworkConfigs,
-          { autoStart: true }
-        )
+        // Ensure worklet is started (WdkAppProvider must be mounted)
+        WorkletLifecycleService.ensureWorkletStarted()
 
         // Generate entropy and encrypt (no biometrics, no keychain save)
         const result = await WorkletLifecycleService.generateEntropyAndEncrypt()
@@ -618,7 +613,7 @@ export function useWalletManager(
         throw err
       }
     })
-  }, [getNetworkConfigs])
+  }, [])
 
   /**
    * Check if a wallet exists (for wallet list operations)
