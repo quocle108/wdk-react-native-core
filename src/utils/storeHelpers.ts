@@ -63,6 +63,10 @@ export function isInitialized(): boolean {
 /**
  * Update balance in wallet state (helper for nested state updates)
  *
+ * IMPORTANT: This function checks if the balance actually changed before creating
+ * new object references. This prevents unnecessary re-renders in components using
+ * useShallow selectors when the same balance is re-fetched.
+ *
  * @param prev - Previous wallet state
  * @param walletId - Wallet identifier
  * @param network - Network name
@@ -89,6 +93,10 @@ export function updateBalanceInState(
 
 /**
  * Update address in wallet state (helper for nested state updates)
+ *
+ * IMPORTANT: This function checks if the address actually changed before creating
+ * new object references. This prevents unnecessary re-renders in components using
+ * useShallow selectors when the same address is re-fetched.
  *
  * @param prev - Previous wallet state
  * @param walletId - Wallet identifier
