@@ -52,7 +52,7 @@
     "@tanstack/react-query": "5.90.17",
     "expo-crypto": "15.0.8",
     "immer": "11.1.3",
-    "@tetherto/pear-wrk-wdk": "github:tetherto/pear-wrk-wdk#ed8cd00fc27781fdf4fed90a2d489d6868d1ab9b",
+    "@tetherto/pear-wrk-wdk": "github:tetherto/pear-wrk-wdk#21a76716f3c26b64725f7c1b84d95ea9ec3d9966",
     "react-native-bare-kit": "0.11.5",
     "react-native-mmkv": "4.1.1",
     "zod": "3.25.76",
