@@ -22,23 +22,25 @@ export const sparkAddressSchema = z.string().regex(/^spark(1|t1|rt1|test1)[a-z0-
 }).min(14).max(90)
 
 /**
- * Address schema (Ethereum or Spark)
+ * Address schema (Generic)
+ * Allows any non-empty string to support any blockchain (BTC, Solana, etc.)
  */
-export const addressSchema = z.union([ethereumAddressSchema, sparkAddressSchema])
+export const addressSchema = z.string().min(1)
+
+export const assetIdSchema = z.string().min(1)
 
 /**
- * Network configuration schema
+ * Network configuration schema (Generic)
+ * Minimal requirements: blockchain string.
+ * All other fields are optional/passthrough to support any chain.
  */
 export const networkConfigSchema = z.object({
-  chainId: z.number().int().positive(),
   blockchain: z.string().min(1),
-  provider: z.string().min(1).optional(),
-  bundlerUrl: z.string().min(1).optional(),
-  paymasterUrl: z.string().min(1).optional(),
-  paymasterAddress: ethereumAddressSchema.optional(),
-  entryPointAddress: ethereumAddressSchema.optional(),
-  transferMaxFee: z.number().nonnegative().optional(),
-})
+  // Common fields are checked loosely if present
+  chainId: z.number().int().optional(),
+  provider: z.string().optional(),
+  // All other fields allowed
+}).passthrough()
 
 /**
  * Network configurations schema
@@ -53,31 +55,35 @@ export const networkConfigsSchema = z.record(
 })
 
 /**
- * Token configuration schema
+ * Asset configuration schema (Generic)
+ * Minimal requirements: id, symbol, name, decimals, isNative.
+ * All other fields are optional/passthrough.
  */
-export const tokenConfigSchema = z.object({
+export const assetConfigSchema = z.object({
+  id: z.string().min(1),
   symbol: z.string().min(1),
   name: z.string().min(1),
-  decimals: z.number().int().min(0).max(18),
-  address: z.union([ethereumAddressSchema, z.null()]),
+  decimals: z.number().int().min(0),
+  isNative: z.boolean(),
+  address: z.union([z.string().min(1), z.null()]).optional(),
+  // All other fields allowed
+}).passthrough()
+
+/**
+ * Network assets schema
+ */
+export const networkAssetsSchema = z.object({
+  assets: z.array(assetConfigSchema),
 })
 
 /**
- * Network tokens schema
+ * Asset configurations schema
  */
-export const networkTokensSchema = z.object({
-  native: tokenConfigSchema,
-  tokens: z.array(tokenConfigSchema),
-})
-
-/**
- * Token configurations schema
- */
-export const tokenConfigsSchema = z.record(
+export const assetConfigsSchema = z.record(
   z.string().min(1),
-  networkTokensSchema
+  networkAssetsSchema
 ).refine((configs) => Object.keys(configs).length > 0, {
-  message: 'TokenConfigs must contain at least one network',
+  message: 'AssetConfigs must contain at least one network',
 })
 
 /**
@@ -119,7 +125,7 @@ export const walletAddressesSchema = z.record(
 
 /**
  * Wallet balances schema
- * Maps network -> accountIndex -> tokenAddress -> balance
+ * Maps network -> accountIndex -> assetId -> balance
  */
 export const walletBalancesSchema = z.record(
   networkNameSchema,
@@ -137,7 +143,7 @@ export const walletBalancesSchema = z.record(
 
 /**
  * Balance loading states schema
- * Maps "network-accountIndex-tokenAddress" -> boolean
+ * Maps "network-accountIndex-assetId" -> boolean
  */
 export const balanceLoadingStatesSchema = z.record(z.string(), z.boolean())
 
@@ -148,7 +154,7 @@ export const balanceFetchResultSchema = z.object({
   success: z.boolean(),
   network: networkNameSchema,
   accountIndex: accountIndexSchema,
-  tokenAddress: z.union([ethereumAddressSchema, z.null()]),
+  assetId: z.string().min(1),
   balance: z.union([balanceStringSchema, z.null()]),
   error: z.string().optional(),
 })

@@ -9,12 +9,16 @@
 export type {
   NetworkConfig,
   NetworkConfigs,
+  AssetConfig,
+  AssetConfigs,
+  NetworkAssets,
   Wallet,
   WalletAddresses,
   WalletBalances,
   BalanceLoadingStates,
   BalanceFetchResult,
   WalletStore,
+  IAsset,
   // Bundle and HRPC types
   BundleConfig,
   HRPC,
@@ -26,6 +30,9 @@ export type {
   CallMethodRequest,
   CallMethodResponse,
 } from './types'
+
+// Entities
+export { BaseAsset } from './entities/Asset'
 
 // RPC enums
 export { LogType } from './types'
@@ -59,18 +66,17 @@ export type { WalletStore as WalletStoreState } from './store/walletStore'
 // Validation Utilities (for validating configs before use)
 export {
   validateNetworkConfigs,
-  validateTokenConfigs,
+  validateAssetConfigs,
   validateBalanceRefreshInterval,
   validateAccountIndex,
-  validateTokenAddress,
 } from './utils/validation'
 
 // Zod Schemas (for runtime validation)
 export {
   networkConfigSchema,
   networkConfigsSchema,
-  tokenConfigSchema,
-  tokenConfigsSchema,
+  assetConfigSchema,
+  assetConfigsSchema,
   walletAddressesSchema,
   walletBalancesSchema,
   accountIndexSchema,
@@ -84,7 +90,8 @@ export {
 // Type Guards (for runtime type checking)
 export {
   isNetworkConfigs,
-  isTokenConfigs,
+  isAssetConfigs,
+  isAssetConfig,
   isEthereumAddress,
   isValidAccountIndex,
   isValidNetworkName,

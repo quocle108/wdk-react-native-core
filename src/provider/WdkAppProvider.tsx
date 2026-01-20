@@ -45,12 +45,10 @@ import { WalletSetupService } from '../services/walletSetupService'
 import { WorkletLifecycleService } from '../services/workletLifecycleService'
 import { normalizeError } from '../utils/errorUtils'
 import { log, logError } from '../utils/logger'
-import { validateNetworkConfigs, validateTokenConfigs } from '../utils/validation'
+import { validateNetworkConfigs } from '../utils/validation'
 import { DEFAULT_QUERY_STALE_TIME_MS, DEFAULT_QUERY_GC_TIME_MS } from '../utils/constants'
 import { InitializationStatus, AppStatus, isAppReadyStatus, isAppInProgressStatus, getCombinedStatus, getWorkletStatus } from '../utils/initializationState'
-import type { NetworkConfigs, TokenConfigs, BundleConfig } from '../types'
-
-
+import type { NetworkConfigs, BundleConfig } from '../types'
 
 /**
  * Context state exposed to consumers
@@ -136,12 +134,11 @@ export interface WdkAppProviderProps {
    *
    * @example
    * ```typescript
-   * import { bundle, HRPC } from './.wdk'
+   * import { bundle } from './.wdk-bundle'
    *
    * <WdkAppProvider
-   *   bundle={{ bundle, HRPC }}
+   *   bundle={{ bundle }}
    *   networkConfigs={...}
-   *   tokenConfigs={...}
    * >
    *   <App />
    * </WdkAppProvider>
@@ -150,8 +147,6 @@ export interface WdkAppProviderProps {
   bundle: BundleConfig
   /** Network configurations */
   networkConfigs: NetworkConfigs
-  /** Token configurations for balance fetching */
-  tokenConfigs: TokenConfigs
   /** Enable automatic wallet initialization on app restart (default: true) */
   enableAutoInitialization?: boolean
   /**
@@ -214,7 +209,6 @@ const deepEqualityFn = (a: any, b: any) => {
 export function WdkAppProvider({
   bundle: bundleConfig,
   networkConfigs,
-  tokenConfigs,
   enableAutoInitialization = true,
   currentUserId,
   clearSensitiveDataOnBackground = false,
@@ -296,14 +290,13 @@ export function WdkAppProvider({
   useEffect(() => {
     try {
       validateNetworkConfigs(networkConfigs)
-      validateTokenConfigs(tokenConfigs)
     } catch (error) {
       const err = normalizeError(error, true, { component: 'WdkAppProvider', operation: 'propsValidation' })
       logError('[WdkAppProvider] Invalid props:', err)
       // Always throw validation errors - they indicate programming errors
       throw err
     }
-  }, [networkConfigs, tokenConfigs])
+  }, [networkConfigs])
 
   // Worklet state - read from workletStore via hook
   const workletHookState = useWorklet()

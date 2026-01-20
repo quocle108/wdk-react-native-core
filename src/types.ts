@@ -24,18 +24,9 @@ export type NetworkConfig<T = Record<string, unknown>> = T
 export type NetworkConfigs<T = Record<string, unknown>> = Record<string, NetworkConfig<T>>
 
 /**
- * Asset Configuration (Generic)
- * 
- * Defines the configuration for an asset.
- * Replaces TokenConfig.
- */
-// Export is handled by `export type { AssetConfig }` above
-
-/**
  * Network Assets (Generic)
  * 
  * Defines the assets available for a network.
- * Replaces NetworkTokens.
  */
 export interface NetworkAssets<T = Record<string, unknown>> {
   /** Array of asset configurations */
@@ -46,7 +37,6 @@ export interface NetworkAssets<T = Record<string, unknown>> {
  * Asset Configurations (Generic)
  * 
  * Maps network names to their asset configurations.
- * Replaces TokenConfigs.
  */
 export type AssetConfigs<T = Record<string, unknown>> = Record<string, NetworkAssets<T>>
 
@@ -146,10 +136,6 @@ export interface WalletStore {
   /** Check if the wallet is initialized */
   isWalletInitialized: () => boolean
 }
-
-// ============================================================================
-// HRPC Types (re-exported from ./types/hrpc)
-// ============================================================================
 
 export {
   LogType,

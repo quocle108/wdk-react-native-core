@@ -9,13 +9,14 @@
 import { z } from 'zod'
 import {
   networkConfigsSchema,
-  tokenConfigsSchema,
+  assetConfigsSchema,
   accountIndexSchema,
   networkNameSchema,
   balanceStringSchema,
   ethereumAddressSchema,
+  assetIdSchema,
 } from './schemas'
-import type { NetworkConfigs, TokenConfigs } from '../types'
+import type { NetworkConfigs, AssetConfigs } from '../types'
 
 /**
  * Extract error message from Zod error
@@ -47,13 +48,13 @@ export function validateNetworkConfigs(networkConfigs: NetworkConfigs): void {
 }
 
 /**
- * Validate token configuration
+ * Validate asset configuration
  */
-export function validateTokenConfigs(tokenConfigs: TokenConfigs): void {
+export function validateAssetConfigs(assetConfigs: AssetConfigs): void {
   try {
-    tokenConfigsSchema.parse(tokenConfigs)
+    assetConfigsSchema.parse(assetConfigs)
   } catch (error) {
-    throw new Error(`Invalid tokenConfigs: ${getZodErrorMessage(error)}`)
+    throw new Error(`Invalid assetConfigs: ${getZodErrorMessage(error)}`)
   }
 }
 
@@ -140,6 +141,15 @@ export function validateTokenAddress(tokenAddress: string | null): void {
   }
 }
 
+export function validateAssetId(assetId: string): void {
+  try {
+    assetIdSchema.parse(assetId)
+  } catch (error) {
+    const message = getZodErrorMessage(error)
+    throw new Error(`Invalid assetId: ${message}`)
+  }
+}
+
 /**
  * Validate balance string
  */
@@ -158,17 +168,15 @@ export function validateBalance(balance: string): void {
  * 
  * @param network - Network name
  * @param accountIndex - Account index
- * @param tokenAddress - Optional token address (null for native tokens)
+ * @param assetId - Asset ID (optional)
  */
 export function validateWalletParams(
   network: string,
   accountIndex: number,
-  tokenAddress?: string | null
+  assetId?: string
 ): void {
   validateNetworkName(network)
   validateAccountIndex(accountIndex)
-  if (tokenAddress !== undefined) {
-    validateTokenAddress(tokenAddress)
-  }
+  assetId && validateAssetId(assetId)
 }
 

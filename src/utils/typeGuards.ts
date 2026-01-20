@@ -11,8 +11,8 @@
 import {
   networkConfigSchema,
   networkConfigsSchema,
-  tokenConfigSchema,
-  tokenConfigsSchema,
+  assetConfigSchema,
+  assetConfigsSchema,
   walletAddressesSchema,
   walletBalancesSchema,
   ethereumAddressSchema,
@@ -24,8 +24,8 @@ import {
 import type {
   NetworkConfig,
   NetworkConfigs,
-  TokenConfig,
-  TokenConfigs,
+  AssetConfig,
+  AssetConfigs,
   WalletAddresses,
   WalletBalances,
 } from '../types'
@@ -47,19 +47,19 @@ export function isNetworkConfigs(value: unknown): value is NetworkConfigs {
 }
 
 /**
- * Type guard to check if a value is a valid TokenConfig
+ * Type guard to check if a value is a valid AssetConfig
  * Uses Zod schema internally for validation
  */
-export function isTokenConfig(value: unknown): value is TokenConfig {
-  return tokenConfigSchema.safeParse(value).success
+export function isAssetConfig(value: unknown): value is AssetConfig {
+  return assetConfigSchema.safeParse(value).success
 }
 
 /**
- * Type guard to check if a value is a valid TokenConfigs
+ * Type guard to check if a value is a valid AssetConfigs
  * Uses Zod schema internally for validation
  */
-export function isTokenConfigs(value: unknown): value is TokenConfigs {
-  return tokenConfigsSchema.safeParse(value).success
+export function isAssetConfigs(value: unknown): value is AssetConfigs {
+  return assetConfigsSchema.safeParse(value).success
 }
 
 /**
@@ -125,5 +125,3 @@ export function isValidNetworkName(value: unknown): value is string {
 export function isValidBalanceString(value: unknown): value is string {
   return balanceStringSchema.safeParse(value).success
 }
-
-

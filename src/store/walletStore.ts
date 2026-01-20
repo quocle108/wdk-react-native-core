@@ -7,9 +7,9 @@
  * 
  * **walletStore** (this file):
  * - Wallet addresses: { [walletId]: { [network]: { [accountIndex]: address } } }
- * - Wallet balances: { [walletId]: { [network]: { [accountIndex]: { [tokenAddress]: balance } } } }
+ * - Wallet balances: { [walletId]: { [network]: { [accountIndex]: { [assetId]: balance } } } }
  * - Address loading states: { [walletId]: { [network-accountIndex]: boolean } }
- * - Balance loading states: { [walletId]: { [network-accountIndex-tokenAddress]: boolean } }
+ * - Balance loading states: { [walletId]: { [network-accountIndex-assetId]: boolean } }
  * - Last balance update timestamps: { [walletId]: { [network]: { [accountIndex]: timestamp } } }
  * - Account list: { [walletId]: Array of account info }
  * - Wallet list: Array of wallet info (multiple wallets)
@@ -95,7 +95,7 @@ export interface WalletState {
   walletLoading: Record<string, WalletLoadingStates>  // walletId -> loading states
   // SOURCE OF TRUTH - balances stored ONLY here (per-wallet)
   balances: WalletBalancesByWallet  // walletId -> balances
-  // Maps walletId -> "network-accountIndex-tokenAddress" -> boolean
+  // Maps walletId -> "network-accountIndex-assetId" -> boolean
   balanceLoading: Record<string, BalanceLoadingStates>  // walletId -> loading states
   lastBalanceUpdate: Record<string, Record<string, Record<number, number>>>  // walletId -> network -> accountIndex -> timestamp
   // Account list management (per-wallet)
