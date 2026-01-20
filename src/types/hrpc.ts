@@ -6,133 +6,25 @@
  * app and the worklet runtime.
  */
 
-// ============================================================================
-// RPC Message Types
-// ============================================================================
+import { HRPC as PearHRPC } from '@tetherto/pear-wrk-wdk'
 
-/**
- * Log type enumeration
- */
-export enum LogType {
-  INFO = 1,
-  ERROR = 2,
-  DEBUG = 3,
-}
+// Re-export types from pear-wrk-wdk
+export {
+  LogType,
+  type LogRequest,
+  type WorkletStartRequest,
+  type WorkletStartResponse,
+  type DisposeRequest,
+  type CallMethodRequest,
+  type CallMethodResponse,
+} from '@tetherto/pear-wrk-wdk'
 
-/**
- * Log request message
- */
-export interface LogRequest {
-  type?: LogType
-  data?: string | null
-}
-
-/**
- * Worklet start request
- */
-export interface WorkletStartRequest {
-  enableDebugLogs?: number
-  seedPhrase?: string | null
-  seedBuffer?: string | null
-  config: string // JSON string of network configurations
-}
-
-/**
- * Worklet start response
- */
-export interface WorkletStartResponse {
-  status?: string | null
-}
-
-/**
- * Dispose request (empty)
- */
-export interface DisposeRequest {
-  // Empty request
-}
-
-/**
- * Call method request
- */
-export interface CallMethodRequest {
-  methodName: string
-  network: string
-  accountIndex: number
-  args?: string | null // JSON string of method arguments
-}
-
-/**
- * Call method response
- */
-export interface CallMethodResponse {
-  result?: string | null // JSON string of method result
-}
+// Re-export HRPC class/interface
+export type HRPC = PearHRPC
 
 // ============================================================================
-// HRPC Interface
+// Bundle Configuration
 // ============================================================================
-
-/**
- * HRPC Interface
- *
- * Interface for the HRPC (Hypercore RPC) class that handles RPC communication
- * with the worklet. This mirrors the HRPC class from pear-wrk-wdk.
- */
-export interface HRPC {
-  /**
-   * Send a log message
-   * @param args - Log request
-   */
-  log(args: LogRequest): void
-
-  /**
-   * Start the worklet
-   * @param args - Worklet start request
-   * @returns Promise resolving to worklet start response
-   */
-  workletStart(args: WorkletStartRequest): Promise<WorkletStartResponse>
-
-  /**
-   * Dispose of the worklet
-   * @param args - Dispose request
-   */
-  dispose(args: DisposeRequest): void
-
-  /**
-   * Call a method on a wallet account
-   * @param args - Call method request
-   * @returns Promise resolving to call method response
-   */
-  callMethod(args: CallMethodRequest): Promise<CallMethodResponse>
-
-  /**
-   * Register a handler for log messages
-   * @param responseFn - Handler function for log requests
-   */
-  onLog(responseFn: (request: LogRequest) => void | Promise<void>): void
-
-  /**
-   * Register a handler for worklet start
-   * @param responseFn - Handler function for worklet start requests
-   */
-  onWorkletStart(
-    responseFn: (request: WorkletStartRequest) => WorkletStartResponse | Promise<WorkletStartResponse>
-  ): void
-
-  /**
-   * Register a handler for dispose
-   * @param responseFn - Handler function for dispose requests
-   */
-  onDispose(responseFn: (request: DisposeRequest) => void | Promise<void>): void
-
-  /**
-   * Register a handler for call method
-   * @param responseFn - Handler function for call method requests
-   */
-  onCallMethod(
-    responseFn: (request: CallMethodRequest) => CallMethodResponse | Promise<CallMethodResponse>
-  ): void
-}
 
 /**
  * HRPC Constructor Interface
@@ -142,10 +34,6 @@ export interface HRPC {
 export interface HRPCConstructor {
   new (stream: unknown): HRPC
 }
-
-// ============================================================================
-// Bundle Configuration
-// ============================================================================
 
 /**
  * Bundle Configuration
@@ -160,7 +48,6 @@ export interface HRPCConstructor {
  * <WdkAppProvider
  *   bundle={{ bundle, HRPC }}
  *   networkConfigs={...}
- *   tokenConfigs={...}
  * >
  *   <App />
  * </WdkAppProvider>
@@ -174,78 +61,27 @@ export interface BundleConfig {
 }
 
 // ============================================================================
-// Extended HRPC Interface
+// Legacy Helpers (Deprecated/No-op)
 // ============================================================================
 
 /**
- * Extended HRPC interface with additional WDK-specific methods
+ * Extended HRPC interface
+ * The base HRPC class now includes all methods. Use HRPC directly.
  */
-export interface ExtendedHRPC extends HRPC {
-  /**
-   * Initialize WDK with encrypted seed
-   */
-  initializeWDK: (options: {
-    encryptionKey: string
-    encryptedSeed: string
-    config: string
-  }) => Promise<{ status?: string | null }>
-
-  /**
-   * Generate entropy and encrypt it
-   */
-  generateEntropyAndEncrypt: (options: {
-    wordCount: number
-  }) => Promise<{
-    encryptionKey: string
-    encryptedSeedBuffer: string
-    encryptedEntropyBuffer: string
-  }>
-
-  /**
-   * Get mnemonic from encrypted entropy
-   */
-  getMnemonicFromEntropy: (options: {
-    encryptedEntropy: string
-    encryptionKey: string
-  }) => Promise<{
-    mnemonic: string
-  }>
-
-  /**
-   * Get seed and entropy from mnemonic phrase
-   */
-  getSeedAndEntropyFromMnemonic: (options: {
-    mnemonic: string
-  }) => Promise<{
-    encryptionKey: string
-    encryptedSeedBuffer: string
-    encryptedEntropyBuffer: string
-  }>
-}
-
-// ============================================================================
-// Type Guards and Helpers
-// ============================================================================
+export type ExtendedHRPC = HRPC
 
 /**
  * Type guard to check if HRPC instance has extended methods
+ * @deprecated The base HRPC class now includes all methods. Always returns true.
  */
 export function isExtendedHRPC(hrpc: HRPC): hrpc is ExtendedHRPC {
-  return (
-    typeof (hrpc as unknown as Record<string, unknown>).initializeWDK === 'function' &&
-    typeof (hrpc as unknown as Record<string, unknown>).generateEntropyAndEncrypt === 'function' &&
-    typeof (hrpc as unknown as Record<string, unknown>).getMnemonicFromEntropy === 'function' &&
-    typeof (hrpc as unknown as Record<string, unknown>).getSeedAndEntropyFromMnemonic === 'function'
-  )
+  return true
 }
 
 /**
  * Safely cast HRPC to ExtendedHRPC
- * Throws if the HRPC instance doesn't have the required methods
+ * @deprecated The base HRPC class now includes all methods. Returns input as-is.
  */
 export function asExtendedHRPC(hrpc: HRPC): ExtendedHRPC {
-  if (!isExtendedHRPC(hrpc)) {
-    throw new Error('HRPC instance does not have required extended methods')
-  }
   return hrpc
 }

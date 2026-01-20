@@ -9,16 +9,11 @@
 export type {
   NetworkConfig,
   NetworkConfigs,
-  TokenConfig,
-  NetworkTokens,
-  TokenConfigs,
   Wallet,
   WalletAddresses,
   WalletBalances,
   BalanceLoadingStates,
   BalanceFetchResult,
-  TokenConfigProvider,
-  TokenHelpers,
   WalletStore,
   // Bundle and HRPC types
   BundleConfig,

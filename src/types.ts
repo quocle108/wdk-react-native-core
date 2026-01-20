@@ -4,71 +4,51 @@
  * All network, token, and wallet type definitions for the WDK React Native Core library.
  */
 
-/**
- * Network Configuration
- * 
- * Defines the configuration for a blockchain network.
- */
-export interface NetworkConfig {
-  /** Chain ID for the network */
-  chainId: number
-  /** Blockchain name (e.g., "ethereum", "polygon") */
-  blockchain: string
-  /** Optional RPC provider URL */
-  provider?: string
-  /** Optional bundler URL for account abstraction */
-  bundlerUrl?: string
-  /** Optional paymaster URL for account abstraction */
-  paymasterUrl?: string
-  /** Optional paymaster contract address */
-  paymasterAddress?: string
-  /** Optional entry point contract address */
-  entryPointAddress?: string
-  /** Optional maximum fee for transfers */
-  transferMaxFee?: number
-}
+import type { AssetConfig, IAsset } from './entities/Asset'
+
+export type { AssetConfig, IAsset }
 
 /**
- * Network Configurations
+ * Network Configuration (Generic)
+ * 
+ * Defines the configuration for a blockchain network.
+ * Now extensible via Generics to support any blockchain (EVM, BTC, Solana, etc.)
+ */
+export type NetworkConfig<T = Record<string, unknown>> = T
+
+/**
+ * Network Configurations (Generic)
  * 
  * Maps network names to their configurations.
  */
-export type NetworkConfigs = Record<string, NetworkConfig>
+export type NetworkConfigs<T = Record<string, unknown>> = Record<string, NetworkConfig<T>>
 
 /**
- * Token Configuration
+ * Asset Configuration (Generic)
  * 
- * Defines the configuration for a token (native or ERC20).
+ * Defines the configuration for an asset.
+ * Replaces TokenConfig.
  */
-export interface TokenConfig {
-  /** Token symbol (e.g., "ETH", "USDT") */
-  symbol: string
-  /** Token name (e.g., "Ethereum", "Tether") */
-  name: string
-  /** Number of decimals (0-18) */
-  decimals: number
-  /** Token contract address (null for native tokens) */
-  address: string | null
+// Export is handled by `export type { AssetConfig }` above
+
+/**
+ * Network Assets (Generic)
+ * 
+ * Defines the assets available for a network.
+ * Replaces NetworkTokens.
+ */
+export interface NetworkAssets<T = Record<string, unknown>> {
+  /** Array of asset configurations */
+  assets: AssetConfig<T>[]
 }
 
 /**
- * Network Tokens
+ * Asset Configurations (Generic)
  * 
- * Defines the tokens available for a network (native + ERC20 tokens).
+ * Maps network names to their asset configurations.
+ * Replaces TokenConfigs.
  */
-export interface NetworkTokens {
-  /** Native token configuration */
-  native: TokenConfig
-  /** Array of ERC20 token configurations */
-  tokens: TokenConfig[]
-}
-
-/**
- * Token Configurations
- * 
- * Maps network names to their token configurations.
- */
-export type TokenConfigs = Record<string, NetworkTokens>
+export type AssetConfigs<T = Record<string, unknown>> = Record<string, NetworkAssets<T>>
 
 /**
  * Wallet
@@ -107,8 +87,8 @@ export type WalletAddressesByWallet = Record<string, WalletAddresses>
 /**
  * Wallet Balances
  * 
- * Maps network -> accountIndex -> tokenAddress -> balance
- * Structure: { [network]: { [accountIndex]: { [tokenAddress]: balance } } }
+ * Maps network -> accountIndex -> assetId -> balance
+ * Structure: { [network]: { [accountIndex]: { [assetId]: balance } } }
  * Note: balance is stored as a string to handle BigInt values
  */
 export type WalletBalances = Record<string, Record<number, Record<string, string>>>
@@ -116,15 +96,15 @@ export type WalletBalances = Record<string, Record<number, Record<string, string
 /**
  * Wallet Balances by Wallet Identifier
  * 
- * Maps walletId -> network -> accountIndex -> tokenAddress -> balance
- * Structure: { [walletId]: { [network]: { [accountIndex]: { [tokenAddress]: balance } } } }
+ * Maps walletId -> network -> accountIndex -> assetId -> balance
+ * Structure: { [walletId]: { [network]: { [accountIndex]: { [assetId]: balance } } } }
  */
 export type WalletBalancesByWallet = Record<string, WalletBalances>
 
 /**
  * Balance Loading States
  * 
- * Maps "network-accountIndex-tokenAddress" -> boolean
+ * Maps "network-accountIndex-assetId" -> boolean
  * Used to track which balances are currently being fetched.
  */
 export type BalanceLoadingStates = Record<string, boolean>
@@ -141,32 +121,12 @@ export interface BalanceFetchResult {
   network: string
   /** Account index */
   accountIndex: number
-  /** Token address (null for native tokens) */
-  tokenAddress: string | null
+  /** Asset identifier */
+  assetId: string
   /** Balance as a string (null if fetch failed) */
   balance: string | null
   /** Error message (only present if success is false) */
   error?: string
-}
-
-/**
- * Token Config Provider
- * 
- * Either a TokenConfigs object or a function that returns TokenConfigs.
- * Allows for dynamic token configuration.
- */
-export type TokenConfigProvider = TokenConfigs | (() => TokenConfigs)
-
-/**
- * Token Helpers
- * 
- * Helper functions for working with token configurations.
- */
-export interface TokenHelpers {
-  /** Get all tokens (native + ERC20) for a network */
-  getTokensForNetwork: (network: string) => TokenConfig[]
-  /** Get all supported network names */
-  getSupportedNetworks: () => string[]
 }
 
 /**

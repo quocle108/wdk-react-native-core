@@ -49,6 +49,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@tetherto/wdk-react-native-secure-storage": "github:tetherto/wdk-react-native-secure-storage",
+    "@tetherto/pear-wrk-wdk": "github:nampc1/pear-wrk-wdk-v2-fork#nampc/dynamic-worklet",
     "@tanstack/react-query": "^5.0.0",
     "expo-crypto": "^15.0.8",
     "react-native-bare-kit": "^0.11.0",
