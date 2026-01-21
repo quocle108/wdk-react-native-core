@@ -1,9 +1,9 @@
 /**
  * Wallet Switching Service
- * 
+ *
  * Handles wallet switching operations: checking wallet existence, loading credentials,
  * and initializing WDK with the new wallet.
- * 
+ *
  * Architecture:
  * - This service is the single source of truth for wallet switching logic
  * - Used by useWallet hook for automatic wallet switching
@@ -13,14 +13,18 @@
 import { WalletSetupService } from './walletSetupService'
 import { WorkletLifecycleService } from './workletLifecycleService'
 import { getWalletStore } from '../store/walletStore'
-import { updateWalletLoadingState, getWalletIdFromLoadingState } from '../store/walletStore'
+import {
+  updateWalletLoadingState,
+  getWalletIdFromLoadingState,
+} from '../store/walletStore'
 import { withOperationMutex } from '../utils/operationMutex'
 import { normalizeError } from '../utils/errorUtils'
 import { log, logError } from '../utils/logger'
+import { produce } from 'immer'
 
 /**
  * Wallet Switching Service
- * 
+ *
  * Provides methods for switching between wallets.
  */
 export class WalletSwitchingService {
@@ -42,7 +46,10 @@ export class WalletSwitchingService {
    * await WalletSwitchingService.switchToWallet('user@example.com')
    * ```
    */
-  static async switchToWallet(walletId: string): Promise<void> {
+  static async switchToWallet(
+    walletId: string,
+    options?: { autoStartWorklet?: boolean },
+  ): Promise<void> {
     return withOperationMutex(`switchToWallet:${walletId}`, async () => {
       const walletStore = getWalletStore()
       const activeWalletId = walletStore.getState().activeWalletId
@@ -55,11 +62,13 @@ export class WalletSwitchingService {
 
       try {
         // Update loading state
-        walletStore.setState((prev) => updateWalletLoadingState(prev, {
-          type: 'loading',
-          identifier: walletId,
-          walletExists: true,
-        }))
+        walletStore.setState((prev) =>
+          updateWalletLoadingState(prev, {
+            type: 'loading',
+            identifier: walletId,
+            walletExists: true,
+          }),
+        )
 
         // Check if wallet exists first (fail fast)
         const walletExists = await WalletSetupService.hasWallet(walletId)
@@ -82,7 +91,9 @@ export class WalletSwitchingService {
         }
 
         // Load credentials for the wallet
-        const credentials = await WalletSetupService.loadExistingWallet(walletId)
+        const credentials = await WalletSetupService.loadExistingWallet(
+          walletId,
+        )
 
         // Switch worklet to this wallet
         await WorkletLifecycleService.initializeWDK({
@@ -91,14 +102,21 @@ export class WalletSwitchingService {
         })
 
         // Update activeWalletId in store and mark as ready
-        walletStore.setState((prev) => ({
-          ...updateWalletLoadingState(prev, {
-            type: 'ready',
-            identifier: walletId,
-          }),
-          activeWalletId: walletId,
-        }))
-        log('[WalletSwitchingService] Successfully switched to wallet', { walletId })
+        walletStore.setState((prev) =>
+          produce(
+            updateWalletLoadingState(prev, {
+              type: 'ready',
+              identifier: walletId,
+            }),
+            (state) => {
+              state.activeWalletId = walletId
+            },
+          ),
+        )
+
+        log('[WalletSwitchingService] Successfully switched to wallet', {
+          walletId,
+        })
       } catch (error) {
         // Cleanup state on error
         const normalizedError = normalizeError(error, false, {
@@ -106,12 +124,20 @@ export class WalletSwitchingService {
           operation: 'switchToWallet',
           walletId,
         })
-        logError('[WalletSwitchingService] Failed to switch wallet, cleaning up state', normalizedError)
-        
+        logError(
+          '[WalletSwitchingService] Failed to switch wallet, cleaning up state',
+          normalizedError,
+        )
+
         walletStore.setState((prev) => {
-          const currentWalletId = getWalletIdFromLoadingState(prev.walletLoadingState)
+          const currentWalletId = getWalletIdFromLoadingState(
+            prev.walletLoadingState,
+          )
           // Only update error state if we were loading this wallet
-          if (currentWalletId === walletId || prev.walletLoadingState.type === 'loading') {
+          if (
+            currentWalletId === walletId ||
+            prev.walletLoadingState.type === 'loading'
+          ) {
             return updateWalletLoadingState(prev, {
               type: 'error',
               identifier: walletId,
@@ -120,7 +146,7 @@ export class WalletSwitchingService {
           }
           return prev
         })
-        
+
         throw normalizedError
       }
     })
@@ -128,7 +154,7 @@ export class WalletSwitchingService {
 
   /**
    * Check if a wallet can be switched to
-   * 
+   *
    * @param walletId - Wallet identifier to check
    * @returns Promise resolving to true if wallet exists and can be switched to
    */
@@ -142,9 +168,11 @@ export class WalletSwitchingService {
         operation: 'canSwitchToWallet',
         walletId,
       })
-      logError('[WalletSwitchingService] Failed to check wallet:', normalizedError)
+      logError(
+        '[WalletSwitchingService] Failed to check wallet:',
+        normalizedError,
+      )
       return false
     }
   }
 }
-

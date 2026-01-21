@@ -38,7 +38,10 @@ interface WorkletWithCleanup extends Worklet {
  * Type guard to check if HRPC has cleanup method
  */
 function hasHRPCCleanup(hrpc: HRPC): hrpc is HRPCWithCleanup {
-  return 'cleanup' in hrpc && typeof (hrpc as Record<string, unknown>).cleanup === 'function'
+  return (
+    'cleanup' in hrpc &&
+    typeof (hrpc as Record<string, unknown>).cleanup === 'function'
+  )
 }
 
 /**
@@ -47,15 +50,15 @@ function hasHRPCCleanup(hrpc: HRPC): hrpc is HRPCWithCleanup {
 function hasWorkletCleanup(worklet: Worklet): worklet is WorkletWithCleanup {
   const w = worklet as unknown as Record<string, unknown>
   return (
-    (typeof w.cleanup === 'function') ||
-    (typeof w.destroy === 'function') ||
-    (typeof w.stop === 'function')
+    typeof w.cleanup === 'function' ||
+    typeof w.destroy === 'function' ||
+    typeof w.stop === 'function'
   )
 }
 
 /**
  * Worklet Lifecycle Service
- * 
+ *
  * Provides methods for managing worklet lifecycle: start, initialize, cleanup, reset.
  */
 export class WorkletLifecycleService {
@@ -65,10 +68,10 @@ export class WorkletLifecycleService {
    */
   private static async cleanupResource(
     resource: HRPC | Worklet | null,
-    cleanupMethods: string[]
+    cleanupMethods: string[],
   ): Promise<void> {
     if (!resource) return
-    
+
     const r = resource as unknown as Record<string, unknown>
     const method = cleanupMethods.find((m) => typeof r[m] === 'function')
     if (method) {
@@ -86,12 +89,12 @@ export class WorkletLifecycleService {
    */
   private static async cleanupWorkletResources(
     hrpc: HRPC | null,
-    worklet: Worklet | null
+    worklet: Worklet | null,
   ): Promise<void> {
     try {
       // Cleanup HRPC if it has a cleanup method
       await this.cleanupResource(hrpc, ['cleanup'])
-      
+
       // Cleanup worklet - try cleanup, destroy, or stop in that order
       await this.cleanupResource(worklet, ['cleanup', 'destroy', 'stop'])
     } catch (error) {
@@ -123,10 +126,7 @@ export class WorkletLifecycleService {
     }
 
     try {
-      store.setState({
-        error: null,
-        isLoading: true,
-      })
+      store.setState({ error: null, isLoading: true })
 
       // Cleanup existing worklet if present
       const { worklet: existingWorklet, hrpc: existingHrpc } = store.getState()
@@ -175,34 +175,48 @@ export class WorkletLifecycleService {
           hrpc: null,
           ipc: null,
           isWorkletStarted: false,
-        })
+        }),
       )
     }
   }
 
   /**
-   * Ensure worklet is started
+   * Ensure worklet is started, starting it if needed
    *
-   * @throws Error if worklet not started
+   * @param networkConfigs - Network configs (required if autoStart=true)
+   * @param options - Options
+   * @param options.autoStart - If true, start worklet if not started (default: false)
+   * @throws Error if worklet not started and autoStart=false or networkConfigs not provided
    */
-  static ensureWorkletStarted(): void {
+  static async ensureWorkletStarted(
+    networkConfigs?: NetworkConfigs,
+    options?: { autoStart?: boolean },
+  ): Promise<void> {
     const store = getWorkletStore()
     const state = store.getState()
 
-    if (!state.isWorkletStarted) {
-      throw new Error('Worklet must be started before this operation. Ensure WdkAppProvider is mounted.')
+    if (state.isWorkletStarted) {
+      return // Already started
     }
+
+    const autoStart = options?.autoStart ?? false
+    if (!autoStart || !networkConfigs) {
+      throw new Error('Worklet must be started before this operation')
+    }
+
+    await this.startWorklet(networkConfigs)
   }
 
   /**
    * Initialize WDK with encrypted seed (ONLY encrypted approach)
    */
-  static async initializeWDK(
-    options: { encryptionKey: string; encryptedSeed: string }
-  ): Promise<void> {
+  static async initializeWDK(options: {
+    encryptionKey: string
+    encryptedSeed: string
+  }): Promise<void> {
     const store = getWorkletStore()
     const state = store.getState()
-    
+
     if (!state.isWorkletStarted) {
       throw new Error('Worklet must be started before initializing WDK')
     }
@@ -217,16 +231,15 @@ export class WorkletLifecycleService {
     }
 
     try {
-      store.setState({ 
-        error: null, 
-        isLoading: true,
-      })
+      store.setState({ error: null, isLoading: true })
 
       // Get HRPC directly from store instead of using requireExtendedHRPC()
       // requireExtendedHRPC() requires isInitialized to be true, but we're setting it here
       const currentState = store.getState()
       if (!currentState.hrpc) {
-        throw new Error('HRPC instance not available. Worklet may not be fully started.')
+        throw new Error(
+          'HRPC instance not available. Worklet may not be fully started.',
+        )
       }
       const result = await currentState.hrpc.initializeWDK({
         encryptionKey: options.encryptionKey,
@@ -254,7 +267,7 @@ export class WorkletLifecycleService {
           error: normalizedError.message,
           isLoading: false,
           isInitialized: false,
-        })
+        }),
       )
     }
   }
@@ -263,7 +276,7 @@ export class WorkletLifecycleService {
    * Generate entropy and encrypt (for creating new wallets)
    */
   static async generateEntropyAndEncrypt(
-    wordCount: 12 | 24 = DEFAULT_MNEMONIC_WORD_COUNT
+    wordCount: 12 | 24 = DEFAULT_MNEMONIC_WORD_COUNT,
   ): Promise<{
     encryptionKey: string
     encryptedSeedBuffer: string
@@ -271,7 +284,7 @@ export class WorkletLifecycleService {
   }> {
     const store = getWorkletStore()
     const state = store.getState()
-    
+
     if (!state.isWorkletStarted) {
       throw new Error('Worklet must be started before generating entropy')
     }
@@ -281,7 +294,9 @@ export class WorkletLifecycleService {
       // These methods may be called before WDK is initialized
       const currentState = store.getState()
       if (!currentState.hrpc) {
-        throw new Error('HRPC instance not available. Worklet may not be fully started.')
+        throw new Error(
+          'HRPC instance not available. Worklet may not be fully started.',
+        )
       }
       const result = await currentState.hrpc.generateEntropyAndEncrypt({
         wordCount,
@@ -293,7 +308,11 @@ export class WorkletLifecycleService {
         encryptedEntropyBuffer: result.encryptedEntropyBuffer,
       }
     } catch (error) {
-      this.handleAndThrowError(error, 'generateEntropyAndEncrypt', 'Failed to generate entropy')
+      this.handleAndThrowError(
+        error,
+        'generateEntropyAndEncrypt',
+        'Failed to generate entropy',
+      )
     }
   }
 
@@ -302,13 +321,13 @@ export class WorkletLifecycleService {
    */
   static async getMnemonicFromEntropy(
     encryptedEntropy: string,
-    encryptionKey: string
+    encryptionKey: string,
   ): Promise<{
     mnemonic: string
   }> {
     const store = getWorkletStore()
     const state = store.getState()
-    
+
     if (!state.isWorkletStarted) {
       throw new Error('Worklet must be started before getting mnemonic')
     }
@@ -318,7 +337,9 @@ export class WorkletLifecycleService {
       // These methods may be called before WDK is initialized
       const currentState = store.getState()
       if (!currentState.hrpc) {
-        throw new Error('HRPC instance not available. Worklet may not be fully started.')
+        throw new Error(
+          'HRPC instance not available. Worklet may not be fully started.',
+        )
       }
       const result = await currentState.hrpc.getMnemonicFromEntropy({
         encryptedEntropy,
@@ -329,25 +350,29 @@ export class WorkletLifecycleService {
         mnemonic: result.mnemonic,
       }
     } catch (error) {
-      this.handleAndThrowError(error, 'getMnemonicFromEntropy', 'Failed to get mnemonic')
+      this.handleAndThrowError(
+        error,
+        'getMnemonicFromEntropy',
+        'Failed to get mnemonic',
+      )
     }
   }
 
   /**
    * Get seed and entropy from mnemonic phrase (for importing existing wallets)
    */
-  static async getSeedAndEntropyFromMnemonic(
-    mnemonic: string
-  ): Promise<{
+  static async getSeedAndEntropyFromMnemonic(mnemonic: string): Promise<{
     encryptionKey: string
     encryptedSeedBuffer: string
     encryptedEntropyBuffer: string
   }> {
     const store = getWorkletStore()
     const state = store.getState()
-    
+
     if (!state.isWorkletStarted) {
-      throw new Error('Worklet must be started before getting seed and entropy from mnemonic')
+      throw new Error(
+        'Worklet must be started before getting seed and entropy from mnemonic',
+      )
     }
 
     try {
@@ -355,7 +380,9 @@ export class WorkletLifecycleService {
       // These methods may be called before WDK is initialized
       const currentState = store.getState()
       if (!currentState.hrpc) {
-        throw new Error('HRPC instance not available. Worklet may not be fully started.')
+        throw new Error(
+          'HRPC instance not available. Worklet may not be fully started.',
+        )
       }
       const result = await currentState.hrpc.getSeedAndEntropyFromMnemonic({
         mnemonic,
@@ -370,7 +397,7 @@ export class WorkletLifecycleService {
       this.handleAndThrowError(
         error,
         'getSeedAndEntropyFromMnemonic',
-        'Failed to get seed and entropy from mnemonic'
+        'Failed to get seed and entropy from mnemonic',
       )
     }
   }
@@ -407,7 +434,7 @@ export class WorkletLifecycleService {
   private static handleAndThrowError(
     error: unknown,
     operation: string,
-    errorMessagePrefix: string
+    errorMessagePrefix: string,
   ): never {
     const normalizedError = normalizeError(error, false, {
       component: 'WorkletLifecycleService',
@@ -424,7 +451,7 @@ export class WorkletLifecycleService {
   private static handleErrorWithStateUpdate(
     error: unknown,
     operation: string,
-    stateUpdate: (normalizedError: Error) => Partial<WorkletState>
+    stateUpdate: (normalizedError: Error) => Partial<WorkletState>,
   ): never {
     const normalizedError = normalizeError(error, false, {
       component: 'WorkletLifecycleService',
@@ -440,10 +467,16 @@ export class WorkletLifecycleService {
    * Extract WDK initialization result status
    * Safely extracts status from result object
    */
-  private static extractWdkInitResult(result: unknown): { status?: string | null } | null {
+  private static extractWdkInitResult(
+    result: unknown,
+  ): { status?: string | null } | null {
     if (result && typeof result === 'object' && 'status' in result) {
       const status = (result as { status?: unknown }).status
-      if (status === null || status === undefined || typeof status === 'string') {
+      if (
+        status === null ||
+        status === undefined ||
+        typeof status === 'string'
+      ) {
         return { status: status ?? null }
       }
     }
@@ -545,4 +578,3 @@ export class WorkletLifecycleService {
     return isWorkletInitialized()
   }
 }
-
