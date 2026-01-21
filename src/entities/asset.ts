@@ -15,6 +15,7 @@
  */
 export type AssetConfig<T = Record<string, unknown>> = T & {
   id: string
+  network: string
   symbol: string
   name: string
   decimals: number
@@ -32,6 +33,7 @@ export type AssetConfig<T = Record<string, unknown>> = T & {
  */
 export interface IAsset {
   getId(): string
+  getNetwork(): string
   getSymbol(): string
   getName(): string
   getDecimals(): number
@@ -55,6 +57,10 @@ export class BaseAsset implements IAsset {
 
   getId(): string {
     return this.config.id
+  }
+  
+  getNetwork(): string {
+    return this.config.network
   }
 
   getSymbol(): string {
