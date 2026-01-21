@@ -7,7 +7,6 @@
 
 import { getWorkletStore } from '../store/workletStore'
 import { getWalletStore } from '../store/walletStore'
-import { asExtendedHRPC } from '../types/hrpc'
 import type { HRPC } from '../types'
 import type { WalletState } from '../store/walletStore'
 
@@ -29,23 +28,6 @@ export function requireInitialized(): HRPC {
     throw new Error('WDK not initialized')
   }
   return state.hrpc
-}
-
-/**
- * Require that worklet is initialized and return extended HRPC instance
- * 
- * @throws Error if worklet is not initialized
- * @returns Extended HRPC instance
- * 
- * @example
- * ```typescript
- * const hrpc = requireExtendedHRPC()
- * await hrpc.initializeWDK(...)
- * ```
- */
-export function requireExtendedHRPC(): ReturnType<typeof asExtendedHRPC> {
-  const hrpc = requireInitialized()
-  return asExtendedHRPC(hrpc)
 }
 
 /**

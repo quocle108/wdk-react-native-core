@@ -3,7 +3,7 @@ import type { Worklet } from 'react-native-bare-kit'
 
 import { WorkletLifecycleService } from '../services/workletLifecycleService'
 import { getWorkletStore } from '../store/workletStore'
-import type { NetworkConfigs, BundleConfig, HRPC, WorkletStartResponse } from '../types'
+import type { WdkConfigs, BundleConfig, HRPC, WorkletStartResponse } from '../types'
 import type { WorkletStore } from '../store/workletStore'
 
 /**
@@ -40,7 +40,7 @@ export interface UseWorkletResult {
   wdkInitResult: { status?: string | null } | null
   encryptedSeed: string | null
   encryptionKey: string | null
-  networkConfigs: NetworkConfigs | null
+  networkConfigs: WdkConfigs | null
   // Actions
   initializeWDK: (options: { encryptionKey: string; encryptedSeed: string }) => Promise<void>
   generateEntropyAndEncrypt: (wordCount?: 12 | 24) => Promise<{
@@ -57,7 +57,7 @@ export interface UseWorkletResult {
   initializeWorklet: (options: {
     encryptionKey: string
     encryptedSeed: string
-    networkConfigs: NetworkConfigs
+    networkConfigs: WdkConfigs
     bundleConfig: BundleConfig
   }) => Promise<void>
   reset: () => void

@@ -46,7 +46,7 @@ import { Worklet } from 'react-native-bare-kit'
 
 // Local imports
 import type {
-  NetworkConfigs,
+  WdkConfigs,
   HRPC,
   WorkletStartResponse,
 } from '../types'
@@ -101,7 +101,7 @@ export interface WorkletState {
   // seedPhrase is never stored - we only use encrypted approach
   // encryptedEntropy is stored in secure storage but not in runtime state
   // It's only needed when retrieving mnemonic, so it's loaded from secure storage on demand
-  networkConfigs: NetworkConfigs | null
+  networkConfigs: WdkConfigs | null
   workletStartResult: WorkletStartResponse | null
   wdkInitResult: { status?: string | null } | null
   // Multi-wallet credential cache (replaces static Map in WalletSetupService)

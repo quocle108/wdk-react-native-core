@@ -73,8 +73,7 @@ export class AddressService {
       const response = await hrpc.callMethod({
         methodName: 'getAddress',
         network,
-        accountIndex,
-        args: null,
+        accountIndex
       })
 
       if (!response.result) {

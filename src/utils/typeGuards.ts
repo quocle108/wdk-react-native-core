@@ -9,8 +9,8 @@
  */
 
 import {
-  networkConfigSchema,
-  networkConfigsSchema,
+  wdkConfigSchema,
+  wdkConfigsSchema,
   assetConfigSchema,
   assetConfigsSchema,
   walletAddressesSchema,
@@ -22,8 +22,8 @@ import {
   balanceStringSchema,
 } from './schemas'
 import type {
-  NetworkConfig,
-  NetworkConfigs,
+  WdkConfig,
+  WdkConfigs,
   AssetConfig,
   AssetConfigs,
   WalletAddresses,
@@ -34,16 +34,16 @@ import type {
  * Type guard to check if a value is a valid NetworkConfig
  * Uses Zod schema internally for validation
  */
-export function isNetworkConfig(value: unknown): value is NetworkConfig {
-  return networkConfigSchema.safeParse(value).success
+export function isWdkConfig(value: unknown): value is WdkConfig {
+  return wdkConfigSchema.safeParse(value).success
 }
 
 /**
  * Type guard to check if a value is a valid NetworkConfigs
  * Uses Zod schema internally for validation
  */
-export function isNetworkConfigs(value: unknown): value is NetworkConfigs {
-  return networkConfigsSchema.safeParse(value).success
+export function isWdkConfigs(value: unknown): value is WdkConfigs {
+  return wdkConfigsSchema.safeParse(value).success
 }
 
 /**

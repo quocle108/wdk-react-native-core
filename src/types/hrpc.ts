@@ -27,15 +27,6 @@ export type HRPC = PearHRPC
 // ============================================================================
 
 /**
- * HRPC Constructor Interface
- *
- * Interface for the HRPC class constructor.
- */
-export interface HRPCConstructor {
-  new (stream: unknown): HRPC
-}
-
-/**
  * Bundle Configuration
  *
  * Configuration for the worklet bundle and HRPC class.
@@ -56,32 +47,7 @@ export interface HRPCConstructor {
 export interface BundleConfig {
   /** The worklet bundle (compiled JavaScript for the worklet runtime) */
   bundle: unknown
-  /** The HRPC class constructor for RPC communication with the worklet */
-  HRPC: HRPCConstructor
-}
-
-// ============================================================================
-// Legacy Helpers (Deprecated/No-op)
-// ============================================================================
-
-/**
- * Extended HRPC interface
- * The base HRPC class now includes all methods. Use HRPC directly.
- */
-export type ExtendedHRPC = HRPC
-
-/**
- * Type guard to check if HRPC instance has extended methods
- * @deprecated The base HRPC class now includes all methods. Always returns true.
- */
-export function isExtendedHRPC(hrpc: HRPC): hrpc is ExtendedHRPC {
-  return true
-}
-
-/**
- * Safely cast HRPC to ExtendedHRPC
- * @deprecated The base HRPC class now includes all methods. Returns input as-is.
- */
-export function asExtendedHRPC(hrpc: HRPC): ExtendedHRPC {
-  return hrpc
+  
+  /** Path to the generated bundle */
+  path: string
 }

@@ -76,7 +76,7 @@ export class AccountService {
     const hrpc = requireInitialized()
 
     // Validate and sanitize args before stringification
-    let argsString: string | null = null
+    let argsString: string | undefined = undefined
     if (args !== undefined && args !== null) {
       // Validate structure and stringify safely
       argsString = safeStringify(args)

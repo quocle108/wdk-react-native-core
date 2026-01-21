@@ -68,7 +68,7 @@ import { getWorkletStore } from '../store/workletStore'
 import { updateWalletLoadingState, isWalletLoadingState, getWalletIdFromLoadingState } from '../store/walletStore'
 import { withOperationMutex } from '../utils/operationMutex'
 import { log, logError } from '../utils/logger'
-import type { NetworkConfigs } from '../types'
+import type { WdkConfigs } from '../types'
 import type { WalletInfo } from '../store/walletStore'
 
 // Re-export WalletInfo for backward compatibility
@@ -124,7 +124,7 @@ export interface UseWalletManagerResult {
   /** Currently active wallet identifier */
   activeWalletId: string | null
   /** Create a new wallet with the given walletId (adds to list) */
-  createWallet: (walletId: string, networkConfigs?: NetworkConfigs) => Promise<void>
+  createWallet: (walletId: string, networkConfigs?: WdkConfigs) => Promise<void>
   /** Refresh the wallet list */
   refreshWalletList: (knownIdentifiers?: string[]) => Promise<void>
   /** Whether wallet list operation is in progress */
@@ -135,7 +135,7 @@ export interface UseWalletManagerResult {
 
 export function useWalletManager(
   walletId?: string,
-  networkConfigs?: NetworkConfigs
+  networkConfigs?: WdkConfigs
 ): UseWalletManagerResult {
   const [error, setError] = useState<string | null>(null)
   
@@ -150,7 +150,7 @@ export function useWalletManager(
    * Get networkConfigs from parameter or workletStore
    * Throws error if not available from either source
    */
-  const getNetworkConfigs = useCallback((): NetworkConfigs => {
+  const getNetworkConfigs = useCallback((): WdkConfigs => {
     const networkConfigsFromStore = workletStore.getState().networkConfigs
     const effectiveNetworkConfigs = networkConfigs ?? networkConfigsFromStore
     
@@ -668,7 +668,7 @@ export function useWalletManager(
   /**
    * Create a new wallet and add it to the wallet list
    */
-  const createWallet = useCallback(async (walletId: string, walletNetworkConfigs?: NetworkConfigs) => {
+  const createWallet = useCallback(async (walletId: string, walletNetworkConfigs?: WdkConfigs) => {
     setIsWalletListLoading(true)
     setWalletListError(null)
 

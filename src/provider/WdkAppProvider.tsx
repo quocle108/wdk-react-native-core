@@ -48,7 +48,7 @@ import { log, logError } from '../utils/logger'
 import { validateNetworkConfigs } from '../utils/validation'
 import { DEFAULT_QUERY_STALE_TIME_MS, DEFAULT_QUERY_GC_TIME_MS } from '../utils/constants'
 import { InitializationStatus, AppStatus, isAppReadyStatus, isAppInProgressStatus, getCombinedStatus, getWorkletStatus } from '../utils/initializationState'
-import type { NetworkConfigs, BundleConfig } from '../types'
+import type { WdkConfigs, BundleConfig } from '../types'
 
 /**
  * Context state exposed to consumers
@@ -137,7 +137,7 @@ export interface WdkAppProviderProps {
    * import { bundle } from './.wdk-bundle'
    *
    * <WdkAppProvider
-   *   bundle={{ bundle }}
+   *   bundle={{ bundle, path }}
    *   networkConfigs={...}
    * >
    *   <App />
@@ -146,7 +146,7 @@ export interface WdkAppProviderProps {
    */
   bundle: BundleConfig
   /** Network configurations */
-  networkConfigs: NetworkConfigs
+  networkConfigs: WdkConfigs
   /** Enable automatic wallet initialization on app restart (default: true) */
   enableAutoInitialization?: boolean
   /**

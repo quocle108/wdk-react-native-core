@@ -7,8 +7,8 @@
 
 // Core Types (Network, Token, and Wallet types)
 export type {
-  NetworkConfig,
-  NetworkConfigs,
+  WdkConfig,
+  WdkConfigs,
   AssetConfig,
   AssetConfigs,
   NetworkAssets,
@@ -22,7 +22,6 @@ export type {
   // Bundle and HRPC types
   BundleConfig,
   HRPC,
-  HRPCConstructor,
   LogRequest,
   WorkletStartRequest,
   WorkletStartResponse,
@@ -32,14 +31,10 @@ export type {
 } from './types'
 
 // Entities
-export { BaseAsset } from './entities/Asset'
+export { BaseAsset } from './entities/asset'
 
 // RPC enums
 export { LogType } from './types'
-
-// HRPC Type Extensions (for extending HRPC functionality)
-export type { ExtendedHRPC } from './types/hrpc'
-export { isExtendedHRPC, asExtendedHRPC } from './types/hrpc'
 
 // Provider (main entry point)
 export { WdkAppProvider } from './provider/WdkAppProvider'
@@ -73,8 +68,8 @@ export {
 
 // Zod Schemas (for runtime validation)
 export {
-  networkConfigSchema,
-  networkConfigsSchema,
+  wdkConfigSchema,
+  wdkConfigsSchema,
   assetConfigSchema,
   assetConfigsSchema,
   walletAddressesSchema,
@@ -89,7 +84,7 @@ export {
 
 // Type Guards (for runtime type checking)
 export {
-  isNetworkConfigs,
+  isWdkConfigs as isNetworkConfigs,
   isAssetConfigs,
   isAssetConfig,
   isEthereumAddress,

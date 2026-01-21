@@ -10,7 +10,7 @@ import {
 import { WorkletLifecycleService } from './workletLifecycleService'
 import { DEFAULT_MNEMONIC_WORD_COUNT } from '../utils/constants'
 import { log, logError } from '../utils/logger'
-import type { NetworkConfigs } from '../types'
+import type { WdkConfigs } from '../types'
 
 /**
  * Wallet setup service
@@ -179,7 +179,7 @@ export class WalletSetupService {
    * Requires biometric authentication
    */
   static async createNewWallet(
-    networkConfigs: NetworkConfigs,
+    networkConfigs: WdkConfigs,
     walletId?: string
   ): Promise<{
     encryptionKey: string
@@ -298,7 +298,7 @@ export class WalletSetupService {
    * Requires biometric authentication
    */
   static async initializeFromMnemonic(
-    networkConfigs: NetworkConfigs,
+    networkConfigs: WdkConfigs,
     mnemonic: string,
     walletId?: string
   ): Promise<{
@@ -388,7 +388,7 @@ export class WalletSetupService {
    * Either creates a new wallet or loads an existing one
    */
   static async initializeWallet(
-    networkConfigs: NetworkConfigs,
+    networkConfigs: WdkConfigs,
     options: {
       createNew?: boolean
       walletId?: string

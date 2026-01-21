@@ -82,3 +82,16 @@ export const ALLOWED_ACCOUNT_METHODS = [
 
 export type AllowedAccountMethod = typeof ALLOWED_ACCOUNT_METHODS[number]
 
+/**
+ * Query Key Tags
+ * 
+ * Centralized constants for TanStack Query keys to ensure consistency
+ * across hooks and cache invalidation.
+ */
+export const QUERY_KEY_TAGS = {
+  BALANCES: 'balances',
+  WALLET: 'wallet',
+  NETWORK: 'network',
+  TOKEN: 'token',
+} as const
+

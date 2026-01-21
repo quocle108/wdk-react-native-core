@@ -8,7 +8,7 @@
 
 import { z } from 'zod'
 import {
-  networkConfigsSchema,
+  wdkConfigsSchema,
   assetConfigsSchema,
   accountIndexSchema,
   networkNameSchema,
@@ -16,7 +16,7 @@ import {
   ethereumAddressSchema,
   assetIdSchema,
 } from './schemas'
-import type { NetworkConfigs, AssetConfigs } from '../types'
+import type { WdkConfigs, AssetConfigs } from '../types'
 
 /**
  * Extract error message from Zod error
@@ -39,9 +39,9 @@ function getZodErrorMessage(error: unknown): string {
 /**
  * Validate network configuration
  */
-export function validateNetworkConfigs(networkConfigs: NetworkConfigs): void {
+export function validateNetworkConfigs(networkConfigs: WdkConfigs): void {
   try {
-    networkConfigsSchema.parse(networkConfigs)
+    wdkConfigsSchema.parse(networkConfigs)
   } catch (error) {
     throw new Error(`Invalid networkConfigs: ${getZodErrorMessage(error)}`)
   }

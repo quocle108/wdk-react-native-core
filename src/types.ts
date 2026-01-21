@@ -4,7 +4,7 @@
  * All network, token, and wallet type definitions for the WDK React Native Core library.
  */
 
-import type { AssetConfig, IAsset } from './entities/Asset'
+import type { AssetConfig, IAsset } from './entities/asset'
 
 export type { AssetConfig, IAsset }
 
@@ -14,14 +14,14 @@ export type { AssetConfig, IAsset }
  * Defines the configuration for a blockchain network.
  * Now extensible via Generics to support any blockchain (EVM, BTC, Solana, etc.)
  */
-export type NetworkConfig<T = Record<string, unknown>> = T
+export type WdkConfig<T = Record<string, unknown>> = T
 
 /**
  * Network Configurations (Generic)
  * 
  * Maps network names to their configurations.
  */
-export type NetworkConfigs<T = Record<string, unknown>> = Record<string, NetworkConfig<T>>
+export type WdkConfigs<T = Record<string, unknown>> = Record<string, WdkConfig<T>>
 
 /**
  * Network Assets (Generic)
@@ -146,9 +146,5 @@ export {
   type CallMethodRequest,
   type CallMethodResponse,
   type HRPC,
-  type HRPCConstructor,
   type BundleConfig,
-  type ExtendedHRPC,
-  isExtendedHRPC,
-  asExtendedHRPC,
 } from './types/hrpc'

@@ -34,7 +34,7 @@ export const assetIdSchema = z.string().min(1)
  * Minimal requirements: blockchain string.
  * All other fields are optional/passthrough to support any chain.
  */
-export const networkConfigSchema = z.object({
+export const wdkConfigSchema = z.object({
   blockchain: z.string().min(1),
   // Common fields are checked loosely if present
   chainId: z.number().int().optional(),
@@ -45,11 +45,11 @@ export const networkConfigSchema = z.object({
 /**
  * Network configurations schema
  */
-export const networkConfigsSchema = z.record(
+export const wdkConfigsSchema = z.record(
   z.string().regex(/^[a-zA-Z0-9_-]+$/, {
     message: 'Network name must contain only alphanumeric characters, hyphens, and underscores',
   }),
-  networkConfigSchema
+  wdkConfigSchema
 ).refine((configs) => Object.keys(configs).length > 0, {
   message: 'NetworkConfigs must contain at least one network',
 })

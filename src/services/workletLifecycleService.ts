@@ -9,14 +9,14 @@ import { Worklet } from 'react-native-bare-kit'
 
 import { getWalletStore } from '../store/walletStore'
 import { getWorkletStore } from '../store/workletStore'
-import { asExtendedHRPC } from '../types/hrpc'
 import { DEFAULT_MNEMONIC_WORD_COUNT } from '../utils/constants'
 import { handleServiceError } from '../utils/errorHandling'
 import { normalizeError } from '../utils/errorUtils'
 import { log, logWarn } from '../utils/logger'
 import { isInitialized as isWorkletInitialized } from '../utils/storeHelpers'
-import type { NetworkConfigs, BundleConfig, HRPC } from '../types'
+import type { WdkConfigs, BundleConfig } from '../types'
 import type { WorkletState } from '../store/workletStore'
+import { HRPC } from '@tetherto/pear-wrk-wdk/hrpc'
 
 /**
  * Extended HRPC type that may have a cleanup method
@@ -106,7 +106,7 @@ export class WorkletLifecycleService {
    * @param bundleConfig - Bundle configuration containing the worklet bundle and HRPC class
    */
   static async startWorklet(
-    networkConfigs: NetworkConfigs,
+    networkConfigs: WdkConfigs,
     bundleConfig: BundleConfig
   ): Promise<void> {
     const store = getWorkletStore()
@@ -137,10 +137,10 @@ export class WorkletLifecycleService {
       const worklet = new Worklet()
 
       // Get bundle and HRPC class from bundleConfig (passed from WdkAppProvider)
-      const { bundle, HRPC } = bundleConfig
+      const { bundle } = bundleConfig
 
       // @ts-ignore - Bundle file (mobile bundle for React Native) - worklet.start expects bundle parameter
-      worklet.start('/wdk-worklet.bundle', bundle)
+      worklet.start(bundleConfig.path, bundle)
 
       const { IPC } = worklet
 
@@ -228,8 +228,7 @@ export class WorkletLifecycleService {
       if (!currentState.hrpc) {
         throw new Error('HRPC instance not available. Worklet may not be fully started.')
       }
-      const extendedHrpc = asExtendedHRPC(currentState.hrpc)
-      const result = await extendedHrpc.initializeWDK({
+      const result = await currentState.hrpc.initializeWDK({
         encryptionKey: options.encryptionKey,
         encryptedSeed: options.encryptedSeed,
         config: JSON.stringify(currentState.networkConfigs || {}),
@@ -284,8 +283,7 @@ export class WorkletLifecycleService {
       if (!currentState.hrpc) {
         throw new Error('HRPC instance not available. Worklet may not be fully started.')
       }
-      const extendedHrpc = asExtendedHRPC(currentState.hrpc)
-      const result = await extendedHrpc.generateEntropyAndEncrypt({
+      const result = await currentState.hrpc.generateEntropyAndEncrypt({
         wordCount,
       })
 
@@ -322,9 +320,7 @@ export class WorkletLifecycleService {
       if (!currentState.hrpc) {
         throw new Error('HRPC instance not available. Worklet may not be fully started.')
       }
-      const extendedHrpc = asExtendedHRPC(currentState.hrpc)
-      
-      const result = await extendedHrpc.getMnemonicFromEntropy({
+      const result = await currentState.hrpc.getMnemonicFromEntropy({
         encryptedEntropy,
         encryptionKey,
       })
@@ -361,8 +357,7 @@ export class WorkletLifecycleService {
       if (!currentState.hrpc) {
         throw new Error('HRPC instance not available. Worklet may not be fully started.')
       }
-      const extendedHrpc = asExtendedHRPC(currentState.hrpc)
-      const result = await extendedHrpc.getSeedAndEntropyFromMnemonic({
+      const result = await currentState.hrpc.getSeedAndEntropyFromMnemonic({
         mnemonic,
       })
 
@@ -393,7 +388,7 @@ export class WorkletLifecycleService {
     options: {
       encryptionKey: string
       encryptedSeed: string
-      networkConfigs: NetworkConfigs
+      networkConfigs: WdkConfigs
       bundleConfig: BundleConfig
     }
   ): Promise<void> {
