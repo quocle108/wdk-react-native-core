@@ -45,7 +45,7 @@ import { WalletSetupService } from '../services/walletSetupService'
 import { WorkletLifecycleService } from '../services/workletLifecycleService'
 import { normalizeError } from '../utils/errorUtils'
 import { log, logError } from '../utils/logger'
-import { validateNetworkConfigs } from '../utils/validation'
+import { validateWdkConfigs } from '../utils/validation'
 import { DEFAULT_QUERY_STALE_TIME_MS, DEFAULT_QUERY_GC_TIME_MS } from '../utils/constants'
 import { InitializationStatus, AppStatus, isAppReadyStatus, isAppInProgressStatus, getCombinedStatus, getWorkletStatus } from '../utils/initializationState'
 import type { WdkConfigs, BundleConfig } from '../types'
@@ -289,7 +289,7 @@ export function WdkAppProvider({
   // Validate props on mount and when props change
   useEffect(() => {
     try {
-      validateNetworkConfigs(networkConfigs)
+      validateWdkConfigs(networkConfigs)
     } catch (error) {
       const err = normalizeError(error, true, { component: 'WdkAppProvider', operation: 'propsValidation' })
       logError('[WdkAppProvider] Invalid props:', err)

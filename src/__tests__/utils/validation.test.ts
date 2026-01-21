@@ -3,8 +3,7 @@
  */
 
 import {
-  validateNetworkConfigs,
-  validateTokenConfigs,
+  validateWdkConfigs,
   validateBalanceRefreshInterval,
   validateRequiredMethods,
   validateAccountIndex,
@@ -12,47 +11,24 @@ import {
   validateTokenAddress,
   validateBalance,
 } from '../../utils/validation'
-import type { NetworkConfigs, TokenConfigs } from '../../types'
+import type { WdkConfigs } from '../../types'
 
 describe('validation', () => {
   describe('validateNetworkConfigs', () => {
     it('should not throw for valid network configs', () => {
-      const validConfigs: NetworkConfigs = {
+      const validConfigs: WdkConfigs = {
         ethereum: {
           chainId: 1,
           blockchain: 'ethereum',
         },
       }
-      expect(() => validateNetworkConfigs(validConfigs)).not.toThrow()
+      expect(() => validateWdkConfigs(validConfigs)).not.toThrow()
     })
 
     it('should throw for invalid network configs', () => {
-      expect(() => validateNetworkConfigs({} as NetworkConfigs)).toThrow()
-      expect(() => validateNetworkConfigs(null as unknown as NetworkConfigs)).toThrow()
-      expect(() => validateNetworkConfigs([] as unknown as NetworkConfigs)).toThrow()
-    })
-  })
-
-  describe('validateTokenConfigs', () => {
-    it('should not throw for valid token configs', () => {
-      const validConfigs: TokenConfigs = {
-        ethereum: {
-          native: {
-            symbol: 'ETH',
-            name: 'Ethereum',
-            decimals: 18,
-            address: null,
-          },
-          tokens: [],
-        },
-      }
-      expect(() => validateTokenConfigs(validConfigs)).not.toThrow()
-    })
-
-    it('should throw for invalid token configs', () => {
-      expect(() => validateTokenConfigs({} as TokenConfigs)).toThrow()
-      expect(() => validateTokenConfigs(null as unknown as TokenConfigs)).toThrow()
-      expect(() => validateTokenConfigs([] as unknown as TokenConfigs)).toThrow()
+      expect(() => validateWdkConfigs({} as WdkConfigs)).toThrow()
+      expect(() => validateWdkConfigs(null as unknown as WdkConfigs)).toThrow()
+      expect(() => validateWdkConfigs([] as unknown as WdkConfigs)).toThrow()
     })
   })
 

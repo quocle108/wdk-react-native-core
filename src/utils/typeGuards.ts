@@ -12,7 +12,6 @@ import {
   wdkConfigSchema,
   wdkConfigsSchema,
   assetConfigSchema,
-  assetConfigsSchema,
   walletAddressesSchema,
   walletBalancesSchema,
   ethereumAddressSchema,
@@ -25,7 +24,6 @@ import type {
   WdkConfig,
   WdkConfigs,
   AssetConfig,
-  AssetConfigs,
   WalletAddresses,
   WalletBalances,
 } from '../types'
@@ -52,14 +50,6 @@ export function isWdkConfigs(value: unknown): value is WdkConfigs {
  */
 export function isAssetConfig(value: unknown): value is AssetConfig {
   return assetConfigSchema.safeParse(value).success
-}
-
-/**
- * Type guard to check if a value is a valid AssetConfigs
- * Uses Zod schema internally for validation
- */
-export function isAssetConfigs(value: unknown): value is AssetConfigs {
-  return assetConfigsSchema.safeParse(value).success
 }
 
 /**

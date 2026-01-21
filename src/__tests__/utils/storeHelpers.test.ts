@@ -4,13 +4,11 @@
 
 import {
   requireInitialized,
-  requireExtendedHRPC,
   isInitialized,
   updateBalanceInState,
   updateAddressInState,
 } from '../../utils/storeHelpers'
 import { getWorkletStore } from '../../store/workletStore'
-import { asExtendedHRPC } from '../../types/hrpc'
 
 // Mock stores
 jest.mock('../../store/workletStore', () => ({
@@ -24,18 +22,12 @@ jest.mock('../../types/hrpc', () => ({
 describe('storeHelpers', () => {
   let mockWorkletStore: any
   let mockHRPC: any
-  let mockExtendedHRPC: any
 
   beforeEach(() => {
     jest.clearAllMocks()
 
     mockHRPC = {
       callMethod: jest.fn(),
-    }
-
-    mockExtendedHRPC = {
-      callMethod: jest.fn(),
-      initializeWDK: jest.fn(),
     }
 
     mockWorkletStore = {
@@ -46,7 +38,6 @@ describe('storeHelpers', () => {
     }
 
     ;(getWorkletStore as jest.Mock).mockReturnValue(mockWorkletStore)
-    ;(asExtendedHRPC as jest.Mock).mockReturnValue(mockExtendedHRPC)
   })
 
   describe('requireInitialized', () => {
@@ -72,23 +63,6 @@ describe('storeHelpers', () => {
       }))
 
       expect(() => requireInitialized()).toThrow('WDK not initialized')
-    })
-  })
-
-  describe('requireExtendedHRPC', () => {
-    it('should return extended HRPC when initialized', () => {
-      const hrpc = requireExtendedHRPC()
-      expect(hrpc).toBe(mockExtendedHRPC)
-      expect(asExtendedHRPC).toHaveBeenCalledWith(mockHRPC)
-    })
-
-    it('should throw error when not initialized', () => {
-      mockWorkletStore.getState = jest.fn(() => ({
-        isInitialized: false,
-        hrpc: null,
-      }))
-
-      expect(() => requireExtendedHRPC()).toThrow('WDK not initialized')
     })
   })
 

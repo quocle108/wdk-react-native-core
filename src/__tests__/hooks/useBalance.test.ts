@@ -10,12 +10,14 @@ import { BalanceService } from '../../services/balanceService'
 import { getWorkletStore } from '../../store/workletStore'
 import { getWalletStore } from '../../store/walletStore'
 import { convertBalanceToString } from '../../utils/balanceUtils'
-import { NATIVE_TOKEN_KEY } from '../../utils/constants'
+import { QUERY_KEY_TAGS } from '../../utils/constants'
+import type { IAsset } from '../../types'
 
 // Mock TanStack Query
 jest.mock('@tanstack/react-query', () => ({
   useQuery: jest.fn(),
   useMutation: jest.fn(),
+  useQueries: jest.fn(),
   useQueryClient: jest.fn(),
 }))
 
@@ -59,6 +61,8 @@ jest.mock('../../utils/logger', () => ({
   logError: jest.fn(),
 }))
 
+const MOCK_NATIVE_TOKEN_ID = 'eth-native'
+
 describe('useBalance', () => {
   let mockWorkletStore: any
   let mockWalletStore: any
@@ -83,13 +87,13 @@ describe('useBalance', () => {
 
   describe('balanceQueryKeys', () => {
     it('should create correct query keys', () => {
-      expect(balanceQueryKeys.all).toEqual(['balances'])
+      expect(balanceQueryKeys.all).toEqual([QUERY_KEY_TAGS.BALANCES])
 
       const walletKey = balanceQueryKeys.byWallet('wallet-1', 0)
-      expect(walletKey).toEqual(['balances', 'wallet', 'wallet-1', 0])
+      expect(walletKey).toEqual([QUERY_KEY_TAGS.BALANCES, QUERY_KEY_TAGS.WALLET, 'wallet-1', 0])
 
       const networkKey = balanceQueryKeys.byNetwork('ethereum')
-      expect(networkKey).toEqual(['balances', 'network', 'ethereum'])
+      expect(networkKey).toEqual([QUERY_KEY_TAGS.BALANCES, QUERY_KEY_TAGS.NETWORK, 'ethereum'])
 
       const walletNetworkKey = balanceQueryKeys.byWalletAndNetwork(
         'wallet-1',
@@ -97,11 +101,11 @@ describe('useBalance', () => {
         'ethereum',
       )
       expect(walletNetworkKey).toEqual([
-        'balances',
-        'wallet',
+        QUERY_KEY_TAGS.BALANCES,
+        QUERY_KEY_TAGS.WALLET,
         'wallet-1',
         0,
-        'network',
+        QUERY_KEY_TAGS.NETWORK,
         'ethereum',
       ])
 
@@ -109,17 +113,17 @@ describe('useBalance', () => {
         'wallet-1',
         0,
         'ethereum',
-        null,
+        MOCK_NATIVE_TOKEN_ID,
       )
       expect(nativeTokenKey).toEqual([
-        'balances',
-        'wallet',
+        QUERY_KEY_TAGS.BALANCES,
+        QUERY_KEY_TAGS.WALLET,
         'wallet-1',
         0,
-        'network',
+        QUERY_KEY_TAGS.NETWORK,
         'ethereum',
-        'token',
-        NATIVE_TOKEN_KEY,
+        QUERY_KEY_TAGS.TOKEN,
+        MOCK_NATIVE_TOKEN_ID,
       ])
 
       const tokenKey = balanceQueryKeys.byToken(
@@ -129,13 +133,13 @@ describe('useBalance', () => {
         '0x123',
       )
       expect(tokenKey).toEqual([
-        'balances',
-        'wallet',
+        QUERY_KEY_TAGS.BALANCES,
+        QUERY_KEY_TAGS.WALLET,
         'wallet-1',
         0,
-        'network',
+        QUERY_KEY_TAGS.NETWORK,
         'ethereum',
-        'token',
+        QUERY_KEY_TAGS.TOKEN,
         '0x123',
       ])
     })
@@ -155,7 +159,7 @@ describe('useBalance', () => {
           success: false,
           network: 'ethereum',
           accountIndex: 0,
-          tokenAddress: null,
+          assetId: MOCK_NATIVE_TOKEN_ID,
           balance: null,
           error: 'Wallet not initialized',
         },
@@ -234,12 +238,21 @@ describe('useBalance', () => {
 
   describe('useBalancesForWallet', () => {
     it('should build query keys for all tokens', async () => {
-      const tokenConfigs = {
-        ethereum: {
-          native: { address: null, symbol: 'ETH', decimals: 18 },
-          tokens: [{ address: '0x123', symbol: 'USDC', decimals: 6 }],
-        },
-      }
+      // Create mock assets
+      const mockAssets: IAsset[] = [
+        {
+          getId: () => MOCK_NATIVE_TOKEN_ID,
+          getNetwork: () => 'ethereum',
+          isNative: () => true,
+          getContractAddress: () => null,
+        } as IAsset,
+        {
+          getId: () => '0x123',
+          getNetwork: () => 'ethereum',
+          isNative: () => false,
+          getContractAddress: () => '0x123',
+        } as IAsset
+      ]
 
       const { useQuery } = await import('@tanstack/react-query')
       const mockUseQuery = useQuery as jest.Mock
@@ -249,8 +262,8 @@ describe('useBalance', () => {
         error: null,
       })
 
-      // Test that query keys are built correctly
-      // This would be tested in a React component, but we verify the structure
+      // We just check the hook can be imported and mocking works
+      // Logic testing for IAsset iteration happens in the hook implementation
       expect(mockUseQuery).toBeDefined()
     })
   })
@@ -274,13 +287,13 @@ describe('useBalance', () => {
         'wallet-1',
         0,
         'ethereum',
-        null,
+        MOCK_NATIVE_TOKEN_ID,
       )
 
-      expect(allKeys).toEqual(['balances'])
-      expect(walletKeys).toEqual(['balances', 'wallet', 'wallet-1', 0])
-      expect(networkKeys).toEqual(['balances', 'network', 'ethereum'])
-      expect(tokenKeys).toContain('balances')
+      expect(allKeys).toEqual([QUERY_KEY_TAGS.BALANCES])
+      expect(walletKeys).toEqual([QUERY_KEY_TAGS.BALANCES, QUERY_KEY_TAGS.WALLET, 'wallet-1', 0])
+      expect(networkKeys).toEqual([QUERY_KEY_TAGS.BALANCES, QUERY_KEY_TAGS.NETWORK, 'ethereum'])
+      expect(tokenKeys).toContain(QUERY_KEY_TAGS.BALANCES)
     })
   })
 })

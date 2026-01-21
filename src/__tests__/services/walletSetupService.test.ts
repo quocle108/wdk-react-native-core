@@ -8,7 +8,7 @@ import { WalletSetupService } from '../../services/walletSetupService'
 import { mockSecureStorage } from '../../__mocks__/secureStorage'
 import { WorkletLifecycleService } from '../../services/workletLifecycleService'
 import { getWorkletStore } from '../../store/workletStore'
-import type { NetworkConfigs } from '../../types'
+import type { WdkConfigs } from '../../types'
 
 // Mock WorkletLifecycleService
 jest.mock('../../services/workletLifecycleService', () => ({
@@ -46,7 +46,7 @@ jest.mock('../../store/workletStore', () => ({
 }))
 
 describe('WalletSetupService', () => {
-  const mockNetworkConfigs: NetworkConfigs = {
+  const mockNetworkConfigs: WdkConfigs = {
     ethereum: {
       chainId: 1,
       blockchain: 'ethereum',

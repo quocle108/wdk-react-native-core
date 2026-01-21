@@ -3,104 +3,91 @@
  */
 
 import {
-  isNetworkConfig,
-  isNetworkConfigs,
-  isTokenConfig,
-  isTokenConfigs,
+  isWdkConfig,
+  isWdkConfigs,
   isWalletAddresses,
   isWalletBalances,
   isEthereumAddress,
+  isAssetConfig,
   isValidAccountIndex,
   isValidNetworkName,
   isValidBalanceString,
 } from '../../utils/typeGuards'
-import type { NetworkConfig, NetworkConfigs, TokenConfig, TokenConfigs } from '../../types'
+import type { WdkConfig, WdkConfigs } from '../../types'
 
 describe('typeGuards', () => {
   describe('isNetworkConfig', () => {
     it('should return true for valid network config', () => {
-      const valid: NetworkConfig = {
+      const valid: WdkConfig = {
         chainId: 1,
         blockchain: 'ethereum',
       }
-      expect(isNetworkConfig(valid)).toBe(true)
+      expect(isWdkConfig(valid)).toBe(true)
     })
 
     it('should return false for invalid network config', () => {
-      expect(isNetworkConfig(null)).toBe(false)
-      expect(isNetworkConfig({})).toBe(false)
-      expect(isNetworkConfig({ chainId: '1', blockchain: 'ethereum' })).toBe(false)
-      expect(isNetworkConfig({ chainId: 1 })).toBe(false)
-      expect(isNetworkConfig({ blockchain: 'ethereum' })).toBe(false)
+      expect(isWdkConfig(null)).toBe(false)
+      expect(isWdkConfig({})).toBe(false)
+      expect(isWdkConfig({ chainId: '1', blockchain: 'ethereum' })).toBe(false)
+      expect(isWdkConfig({ chainId: 1 })).toBe(false)
+      expect(isWdkConfig({ blockchain: 'ethereum' })).toBe(false)
     })
   })
 
   describe('isNetworkConfigs', () => {
     it('should return true for valid network configs', () => {
-      const valid: NetworkConfigs = {
+      const valid: WdkConfigs = {
         ethereum: {
           chainId: 1,
           blockchain: 'ethereum',
         },
       }
-      expect(isNetworkConfigs(valid)).toBe(true)
+      expect(isWdkConfigs(valid)).toBe(true)
     })
 
     it('should return false for invalid network configs', () => {
-      expect(isNetworkConfigs(null)).toBe(false)
-      expect(isNetworkConfigs({})).toBe(false)
-      expect(isNetworkConfigs([])).toBe(false)
-      expect(isNetworkConfigs({ ethereum: null })).toBe(false)
+      expect(isWdkConfigs(null)).toBe(false)
+      expect(isWdkConfigs({})).toBe(false)
+      expect(isWdkConfigs([])).toBe(false)
+      expect(isWdkConfigs({ ethereum: null })).toBe(false)
     })
   })
 
-  describe('isTokenConfig', () => {
-    it('should return true for valid token config', () => {
-      const valid: TokenConfig = {
+  describe('isAssetConfig', () => {
+    it('should return true for valid asset config', () => {
+      const valid = {
+        id: 'eth-native',
+        network: 'ethereum',
         symbol: 'ETH',
         name: 'Ethereum',
         decimals: 18,
+        isNative: true,
         address: null,
       }
-      expect(isTokenConfig(valid)).toBe(true)
+      expect(isAssetConfig(valid)).toBe(true)
 
-      const validWithAddress: TokenConfig = {
+      const validWithAddress = {
+        id: 'usdt',
+        network: 'ethereum',
         symbol: 'USDT',
         name: 'Tether',
         decimals: 6,
+        isNative: false,
         address: '0x1234567890123456789012345678901234567890',
       }
-      expect(isTokenConfig(validWithAddress)).toBe(true)
+      expect(isAssetConfig(validWithAddress)).toBe(true)
     })
 
-    it('should return false for invalid token config', () => {
-      expect(isTokenConfig(null)).toBe(false)
-      expect(isTokenConfig({})).toBe(false)
-      expect(isTokenConfig({ symbol: 'ETH' })).toBe(false)
-      expect(isTokenConfig({ symbol: 'ETH', name: 'Ethereum', decimals: '18' })).toBe(false)
-    })
-  })
-
-  describe('isTokenConfigs', () => {
-    it('should return true for valid token configs', () => {
-      const valid: TokenConfigs = {
-        ethereum: {
-          native: {
-            symbol: 'ETH',
-            name: 'Ethereum',
-            decimals: 18,
-            address: null,
-          },
-          tokens: [],
-        },
-      }
-      expect(isTokenConfigs(valid)).toBe(true)
-    })
-
-    it('should return false for invalid token configs', () => {
-      expect(isTokenConfigs(null)).toBe(false)
-      expect(isTokenConfigs({})).toBe(false)
-      expect(isTokenConfigs([])).toBe(false)
+    it('should return false for invalid asset config', () => {
+      expect(isAssetConfig(null)).toBe(false)
+      expect(isAssetConfig({})).toBe(false)
+      expect(isAssetConfig({ symbol: 'ETH' })).toBe(false)
+      expect(isAssetConfig({ 
+        id: 'eth',
+        symbol: 'ETH', 
+        name: 'Ethereum', 
+        decimals: '18' // Invalid type
+      })).toBe(false)
     })
   })
 

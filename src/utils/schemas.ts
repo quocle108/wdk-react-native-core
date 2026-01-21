@@ -70,23 +70,6 @@ export const assetConfigSchema = z.object({
 }).passthrough()
 
 /**
- * Network assets schema
- */
-export const networkAssetsSchema = z.object({
-  assets: z.array(assetConfigSchema),
-})
-
-/**
- * Asset configurations schema
- */
-export const assetConfigsSchema = z.record(
-  z.string().min(1),
-  networkAssetsSchema
-).refine((configs) => Object.keys(configs).length > 0, {
-  message: 'AssetConfigs must contain at least one network',
-})
-
-/**
  * Account index schema
  */
 export const accountIndexSchema = z.number().int().nonnegative()

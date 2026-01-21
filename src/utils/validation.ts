@@ -9,14 +9,13 @@
 import { z } from 'zod'
 import {
   wdkConfigsSchema,
-  assetConfigsSchema,
   accountIndexSchema,
   networkNameSchema,
   balanceStringSchema,
   ethereumAddressSchema,
   assetIdSchema,
 } from './schemas'
-import type { WdkConfigs, AssetConfigs } from '../types'
+import type { WdkConfigs } from '../types'
 
 /**
  * Extract error message from Zod error
@@ -39,22 +38,11 @@ function getZodErrorMessage(error: unknown): string {
 /**
  * Validate network configuration
  */
-export function validateNetworkConfigs(networkConfigs: WdkConfigs): void {
+export function validateWdkConfigs(networkConfigs: WdkConfigs): void {
   try {
     wdkConfigsSchema.parse(networkConfigs)
   } catch (error) {
     throw new Error(`Invalid networkConfigs: ${getZodErrorMessage(error)}`)
-  }
-}
-
-/**
- * Validate asset configuration
- */
-export function validateAssetConfigs(assetConfigs: AssetConfigs): void {
-  try {
-    assetConfigsSchema.parse(assetConfigs)
-  } catch (error) {
-    throw new Error(`Invalid assetConfigs: ${getZodErrorMessage(error)}`)
   }
 }
 

@@ -2,7 +2,6 @@
  * Tests for HRPC type guards
  */
 
-import { isExtendedHRPC, asExtendedHRPC } from '../../types/hrpc'
 import type { HRPC } from '../../types/hrpc'
 
 describe('hrpc', () => {
@@ -16,7 +15,7 @@ describe('hrpc', () => {
         getSeedAndEntropyFromMnemonic: jest.fn(),
       } as unknown as HRPC
 
-      expect(isExtendedHRPC(hrpc)).toBe(true)
+      expect(hrpc).toBe(true)
     })
 
     it('should return false for HRPC without initializeWDK', () => {
@@ -27,7 +26,7 @@ describe('hrpc', () => {
         getSeedAndEntropyFromMnemonic: jest.fn(),
       } as unknown as HRPC
 
-      expect(isExtendedHRPC(hrpc)).toBe(false)
+      expect(hrpc).toBe(false)
     })
 
     it('should return false for HRPC without generateEntropyAndEncrypt', () => {
@@ -38,7 +37,7 @@ describe('hrpc', () => {
         getSeedAndEntropyFromMnemonic: jest.fn(),
       } as unknown as HRPC
 
-      expect(isExtendedHRPC(hrpc)).toBe(false)
+      expect(hrpc).toBe(false)
     })
 
     it('should return false for HRPC without getMnemonicFromEntropy', () => {
@@ -49,7 +48,7 @@ describe('hrpc', () => {
         getSeedAndEntropyFromMnemonic: jest.fn(),
       } as unknown as HRPC
 
-      expect(isExtendedHRPC(hrpc)).toBe(false)
+      expect(hrpc).toBe(false)
     })
 
     it('should return false for HRPC without getSeedAndEntropyFromMnemonic', () => {
@@ -60,7 +59,7 @@ describe('hrpc', () => {
         getMnemonicFromEntropy: jest.fn(),
       } as unknown as HRPC
 
-      expect(isExtendedHRPC(hrpc)).toBe(false)
+      expect(hrpc).toBe(false)
     })
 
     it('should return false for HRPC with non-function methods', () => {
@@ -72,7 +71,7 @@ describe('hrpc', () => {
         getSeedAndEntropyFromMnemonic: jest.fn(),
       } as unknown as HRPC
 
-      expect(isExtendedHRPC(hrpc)).toBe(false)
+      expect(hrpc).toBe(false)
     })
 
     it('should return false for basic HRPC', () => {
@@ -80,7 +79,7 @@ describe('hrpc', () => {
         callMethod: jest.fn(),
       } as unknown as HRPC
 
-      expect(isExtendedHRPC(hrpc)).toBe(false)
+      expect(hrpc).toBe(false)
     })
   })
 
@@ -94,7 +93,7 @@ describe('hrpc', () => {
         getSeedAndEntropyFromMnemonic: jest.fn(),
       } as unknown as HRPC
 
-      const result = asExtendedHRPC(hrpc)
+      const result = hrpc
       expect(result).toBe(hrpc)
     })
 
@@ -103,7 +102,7 @@ describe('hrpc', () => {
         callMethod: jest.fn(),
       } as unknown as HRPC
 
-      expect(() => asExtendedHRPC(hrpc)).toThrow(
+      expect(() => hrpc).toThrow(
         'HRPC instance does not have required extended methods'
       )
     })
@@ -116,7 +115,7 @@ describe('hrpc', () => {
         getSeedAndEntropyFromMnemonic: jest.fn(),
       } as unknown as HRPC
 
-      expect(() => asExtendedHRPC(hrpc)).toThrow(
+      expect(() => hrpc).toThrow(
         'HRPC instance does not have required extended methods'
       )
     })

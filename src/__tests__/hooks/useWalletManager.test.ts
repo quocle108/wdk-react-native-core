@@ -6,7 +6,7 @@
 
 import { WalletSetupService } from '../../services/walletSetupService'
 import { getWalletStore } from '../../store/walletStore'
-import type { NetworkConfigs } from '../../types'
+import type { WdkConfigs } from '../../types'
 
 // Mock stores and services
 jest.mock('../../store/walletStore', () => ({
@@ -42,7 +42,7 @@ jest.mock('zustand/react/shallow', () => ({
 
 describe('useWalletManager', () => {
   let mockWalletStore: any
-  const mockNetworkConfigs: NetworkConfigs = {
+  const mockNetworkConfigs: WdkConfigs = {
     ethereum: {
       chainId: 1,
       blockchain: 'ethereum',

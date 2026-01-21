@@ -57,7 +57,7 @@ import {
 } from '../utils/constants'
 import { logError } from '../utils/logger'
 import { validateWalletParams } from '../utils/validation'
-import type { BalanceFetchResult, AssetConfigs, IAsset } from '../types'
+import type { BalanceFetchResult, IAsset } from '../types'
 
 /**
  * Balance query options

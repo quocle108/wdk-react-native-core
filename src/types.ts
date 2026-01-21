@@ -24,23 +24,6 @@ export type WdkConfig<T = Record<string, unknown>> = T
 export type WdkConfigs<T = Record<string, unknown>> = Record<string, WdkConfig<T>>
 
 /**
- * Network Assets (Generic)
- * 
- * Defines the assets available for a network.
- */
-export interface NetworkAssets<T = Record<string, unknown>> {
-  /** Array of asset configurations */
-  assets: AssetConfig<T>[]
-}
-
-/**
- * Asset Configurations (Generic)
- * 
- * Maps network names to their asset configurations.
- */
-export type AssetConfigs<T = Record<string, unknown>> = Record<string, NetworkAssets<T>>
-
-/**
  * Wallet
  * 
  * Represents a wallet instance with metadata.

@@ -10,8 +10,6 @@ export type {
   WdkConfig,
   WdkConfigs,
   AssetConfig,
-  AssetConfigs,
-  NetworkAssets,
   Wallet,
   WalletAddresses,
   WalletBalances,
@@ -60,8 +58,7 @@ export type { WalletStore as WalletStoreState } from './store/walletStore'
 
 // Validation Utilities (for validating configs before use)
 export {
-  validateNetworkConfigs,
-  validateAssetConfigs,
+  validateWdkConfigs,
   validateBalanceRefreshInterval,
   validateAccountIndex,
 } from './utils/validation'
@@ -71,7 +68,6 @@ export {
   wdkConfigSchema,
   wdkConfigsSchema,
   assetConfigSchema,
-  assetConfigsSchema,
   walletAddressesSchema,
   walletBalancesSchema,
   accountIndexSchema,
@@ -85,7 +81,6 @@ export {
 // Type Guards (for runtime type checking)
 export {
   isWdkConfigs as isNetworkConfigs,
-  isAssetConfigs,
   isAssetConfig,
   isEthereumAddress,
   isValidAccountIndex,

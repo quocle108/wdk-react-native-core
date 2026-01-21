@@ -6,7 +6,7 @@
 
 import { WorkletLifecycleService } from '../../services/workletLifecycleService'
 import { getWorkletStore } from '../../store/workletStore'
-import type { NetworkConfigs, BundleConfig } from '../../types'
+import type { WdkConfigs, BundleConfig } from '../../types'
 
 // Mock dependencies
 const mockWorkletInstance = {
@@ -35,7 +35,7 @@ const MockHRPC = jest.fn().mockImplementation(() => mockHRPCInstance)
 // Mock bundleConfig that will be passed to startWorklet
 const mockBundleConfig: BundleConfig = {
   bundle: 'mock-bundle',
-  HRPC: MockHRPC as any,
+  path: 'mock-path',
 }
 
 // Create a shared mock store that will be returned by getWorkletStore
@@ -143,7 +143,7 @@ const defaultNetworkConfigs = {
     blockchain: 'spark',
     network: 'MAINNET', // Spark network type (MAINNET, TESTNET)
   },
-} as NetworkConfigs
+} as WdkConfigs
 
 describe('WorkletLifecycleService', () => {
   let mockStore: ReturnType<typeof getWorkletStore>
@@ -444,7 +444,7 @@ describe('WorkletLifecycleService', () => {
     })
 
     it('should handle minimal network configuration', async () => {
-      const minimalConfig: NetworkConfigs = {
+      const minimalConfig: WdkConfigs = {
         ethereum: {
           chainId: 1,
           blockchain: 'ethereum',
@@ -468,7 +468,7 @@ describe('WorkletLifecycleService', () => {
     })
 
     it('should handle network configuration with all optional fields', async () => {
-      const fullConfig: NetworkConfigs = {
+      const fullConfig: WdkConfigs = {
         testnet: {
           chainId: 12345,
           blockchain: 'testnet',
