@@ -34,8 +34,7 @@ const MockHRPC = jest.fn().mockImplementation(() => mockHRPCInstance)
 
 // Mock bundleConfig that will be passed to startWorklet
 const mockBundleConfig: BundleConfig = {
-  bundle: 'mock-bundle',
-  path: 'mock-path',
+  bundle: 'mock-bundle'
 }
 
 // Create a shared mock store that will be returned by getWorkletStore

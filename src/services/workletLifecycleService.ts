@@ -114,7 +114,7 @@ export class WorkletLifecycleService {
   ): Promise<void> {
     const store = getWorkletStore()
     const state = store.getState()
-
+    
     if (state.isLoading) {
       logWarn('Worklet initialization already in progress')
       return
@@ -124,7 +124,7 @@ export class WorkletLifecycleService {
       log('Worklet already started')
       return
     }
-
+    
     try {
       store.setState({ error: null, isLoading: true })
 
@@ -139,8 +139,7 @@ export class WorkletLifecycleService {
       // Get bundle and HRPC class from bundleConfig (passed from WdkAppProvider)
       const { bundle } = bundleConfig
 
-      // @ts-ignore - Bundle file (mobile bundle for React Native) - worklet.start expects bundle parameter
-      worklet.start(bundleConfig.path, bundle)
+      worklet.start('wdk-worklet.bundle', bundle)
 
       const { IPC } = worklet
 

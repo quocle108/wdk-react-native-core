@@ -46,8 +46,5 @@ export type HRPC = PearHRPC
  */
 export interface BundleConfig {
   /** The worklet bundle (compiled JavaScript for the worklet runtime) */
-  bundle: unknown
-  
-  /** Path to the generated bundle */
-  path: string
+  bundle: string
 }
