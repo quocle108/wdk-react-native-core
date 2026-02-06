@@ -514,30 +514,6 @@ export class WorkletLifecycleService {
   }
 
   /**
-   * Cleanup worklet resources
-   * Clears only addresses, seed, and WDK instance - does NOT terminate the worklet
-   * The worklet continues running for faster re-initialization
-   */
-  static async cleanup(): Promise<void> {
-    const workletStore = getWorkletStore()
-    const walletStore = getWalletStore()
-
-    // Clear only sensitive data - addresses, seed, and WDK instance
-    // Do NOT terminate worklet, hrpc, or ipc - keep them running
-    workletStore.setState({
-      encryptedSeed: null,
-      encryptionKey: null,
-      isInitialized: false,
-      wdkInitResult: null,
-    })
-
-    // Clear addresses from wallet store
-    walletStore.setState({
-      addresses: {},
-    })
-  }
-
-  /**
    * Reset worklet state (synchronous)
    * Clears only addresses, seed, and WDK instance - does NOT terminate the worklet
    * The worklet continues running for faster re-initialization

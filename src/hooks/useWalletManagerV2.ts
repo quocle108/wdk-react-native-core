@@ -2,6 +2,7 @@ import { produce } from 'immer'
 import { useMemo, useCallback } from 'react'
 import { WalletSetupService } from '../services/walletSetupService'
 import { WorkletLifecycleService } from '../services/workletLifecycleService'
+import { AddressService } from '../services/addressService'
 import {
   getWalletStore,
   updateWalletLoadingState,
@@ -56,19 +57,32 @@ export interface UseWalletManagerResult {
    * Locks the wallet.
    * This clears all sensitive data from memory and stops the worklet.
    */
-  lock: () => Promise<void>
+  lock: () => void
 
   /**
    * Unlocks the currently active wallet.
    * This typically triggers a biometric prompt to decrypt and load the wallet.
+   * @param walletId - Optional walletId to switch to before unlocking
    */
-  unlock: () => Promise<void>
+  unlock: (walletId?: string) => Promise<void>
 
   /** Clear the wallet cache. */
   clearCache: () => void
 
-  /** Create a temporary wallet for previewing addresses. */
-  createTemporaryWallet: () => Promise<void>
+  /**
+   * Create a temporary wallet for previewing addresses
+   * This creates a wallet in memory only (no biometrics, not saved to secure storage)
+   * Useful for previewing addresses before committing to creating a real wallet
+   *
+   * @param mnemonic - Optional mnemonic to restore from. If not provided, generates a new random wallet.
+   */
+  createTemporaryWallet: (mnemonic?: string) => Promise<void>
+
+  /**
+   * Clear the temporary wallet session.
+   * Resets the WDK state and clears any temporary data from memory.
+   */
+  clearTemporaryWallet: () => void
 
   /** Get mnemonic phrase from wallet (requires biometric auth). */
   getMnemonic: (walletId: string) => Promise<string | null>
@@ -169,47 +183,55 @@ export function useWalletManager(): UseWalletManagerResult {
     walletStore.setState({ activeWalletId: walletId })
   }, [])
 
-  const unlock = useCallback(async () => {
-    const targetWalletId = walletStore.getState().activeWalletId
+  const unlock = useCallback(
+    async (walletId?: string) => {
+      // If walletId provided, set it as active first
+      if (walletId) {
+        walletStore.setState({ activeWalletId: walletId })
+      }
 
-    if (!targetWalletId) {
-      log('[useWalletManager] No wallet is selected', { targetWalletId })
+      const targetWalletId = walletStore.getState().activeWalletId
 
-      return
-    }
+      if (!targetWalletId) {
+        log('[useWalletManager] No wallet is selected', { targetWalletId })
 
-    try {
-      walletStore.setState((prev) =>
-        updateWalletLoadingState(prev, {
-          type: 'loading',
-          identifier: targetWalletId,
-          walletExists: true,
-        }),
-      )
+        return
+      }
 
-      await WalletSetupService.initializeWallet({
-        walletId: targetWalletId,
-      })
+      try {
+        walletStore.setState((prev) =>
+          updateWalletLoadingState(prev, {
+            type: 'loading',
+            identifier: targetWalletId,
+            walletExists: true,
+          }),
+        )
 
-      walletStore.setState((prev) =>
-        updateWalletLoadingState(prev, {
-          type: 'ready',
-          identifier: targetWalletId,
-        }),
-      )
-    } catch (err) {
-      logError('Failed to unlock wallet:', err)
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      walletStore.setState((prev) =>
-        updateWalletLoadingState(prev, {
-          type: 'error',
-          identifier: targetWalletId,
-          error: new Error(errorMessage),
-        }),
-      )
-      throw err
-    }
-  }, [walletStore])
+        await WalletSetupService.initializeWallet({
+          walletId: targetWalletId,
+        })
+
+        walletStore.setState((prev) =>
+          updateWalletLoadingState(prev, {
+            type: 'ready',
+            identifier: targetWalletId,
+          }),
+        )
+      } catch (err) {
+        logError('Failed to unlock wallet:', err)
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        walletStore.setState((prev) =>
+          updateWalletLoadingState(prev, {
+            type: 'error',
+            identifier: targetWalletId,
+            error: new Error(errorMessage),
+          }),
+        )
+        throw err
+      }
+    },
+    [walletStore],
+  )
 
   const checkWallet = useCallback(
     async (walletId: string): Promise<boolean> => {
@@ -509,9 +531,9 @@ export function useWalletManager(): UseWalletManagerResult {
    * Clear active wallet ID
    * Useful when switching users or logging out to prevent auto-initialization with wrong wallet
    */
-  const lock = useCallback(async () => {
+  const lock = useCallback(() => {
     if (walletStore.getState().activeWalletId) {
-      await WorkletLifecycleService.cleanup()
+      WorkletLifecycleService.reset()
       walletStore.setState({
         activeWalletId: null,
         walletLoadingState: { type: 'not_loaded' },
@@ -539,36 +561,56 @@ export function useWalletManager(): UseWalletManagerResult {
    * Create a temporary wallet for previewing addresses
    * This creates a wallet in memory only (no biometrics, not saved to secure storage)
    * Useful for previewing addresses before committing to creating a real wallet
+   *
+   * @param mnemonic - Optional mnemonic to restore from. If not provided, generates a new random wallet.
    */
-  const createTemporaryWallet = useCallback(async () => {
-    return withOperationMutex('createTemporaryWallet', async () => {
-      try {
-        const effectiveWdkConfigs = getWdkConfigs()
+  const createTemporaryWallet = useCallback(
+    async (mnemonic?: string) => {
+      return withOperationMutex('createTemporaryWallet', async () => {
+        try {
+          const effectiveWdkConfigs = getWdkConfigs()
 
-        // Ensure worklet is started (auto-start if needed)
-        await WorkletLifecycleService.ensureWorkletStarted(
-          effectiveWdkConfigs,
-          { autoStart: true },
-        )
+          // Ensure worklet is started (auto-start if needed)
+          await WorkletLifecycleService.ensureWorkletStarted(
+            effectiveWdkConfigs,
+            { autoStart: true },
+          )
 
-        // Generate entropy and encrypt (no biometrics, no keychain save)
-        const result = await WorkletLifecycleService.generateEntropyAndEncrypt()
+          let encryptionKey: string
+          let encryptedSeed: string
 
-        // Initialize WDK with temporary credentials
-        await WorkletLifecycleService.initializeWDK({
-          encryptionKey: result.encryptionKey,
-          encryptedSeed: result.encryptedSeedBuffer,
-        })
+          if (mnemonic) {
+            const result =
+              await WorkletLifecycleService.getSeedAndEntropyFromMnemonic(
+                mnemonic,
+              )
+            encryptionKey = result.encryptionKey
+            encryptedSeed = result.encryptedSeedBuffer
+          } else {
+            // Generate entropy and encrypt (no biometrics, no keychain save)
+            const result =
+              await WorkletLifecycleService.generateEntropyAndEncrypt()
+            encryptionKey = result.encryptionKey
+            encryptedSeed = result.encryptedSeedBuffer
+          }
 
-        // Don't update activeWalletId for temporary wallet (it's not a real wallet)
-        // Temporary wallets don't affect walletLoadingState
-        log('[useWalletManager] Temporary wallet created successfully')
-      } catch (err) {
-        logError('[useWalletManager] Failed to create temporary wallet:', err)
-        throw err
-      }
-    })
-  }, [getWdkConfigs])
+          // Initialize WDK with temporary credentials
+          await WorkletLifecycleService.initializeWDK({
+            encryptionKey,
+            encryptedSeed,
+          })
+
+          // Don't update activeWalletId for temporary wallet (it's not a real wallet)
+          // Temporary wallets don't affect walletLoadingState
+          log('[useWalletManager] Temporary wallet created successfully')
+        } catch (err) {
+          logError('[useWalletManager] Failed to create temporary wallet:', err)
+          throw err
+        }
+      })
+    },
+    [getWdkConfigs],
+  )
 
   /**
    * Create a new wallet and add it to the wallet list
@@ -636,6 +678,12 @@ export function useWalletManager(): UseWalletManagerResult {
     log('[useWalletManager] Cleared wallet cache')
   }, [walletStore])
 
+  const clearTemporaryWallet = useCallback(() => {
+    WorkletLifecycleService.reset()
+    clearCache()
+    log('[useWalletManager] Cleared temporary wallet session')
+  }, [clearCache])
+  
   return useMemo(
     () => ({
       activeWalletId,
@@ -651,6 +699,7 @@ export function useWalletManager(): UseWalletManagerResult {
       // Wallet Management
       createWallet,
       createTemporaryWallet,
+      clearTemporaryWallet,
       restoreWallet,
       deleteWallet,
       generateMnemonic,
@@ -671,6 +720,7 @@ export function useWalletManager(): UseWalletManagerResult {
       clearCache,
       createWallet,
       createTemporaryWallet,
+      clearTemporaryWallet,
       restoreWallet,
       deleteWallet,
       generateMnemonic,
