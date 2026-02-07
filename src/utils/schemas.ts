@@ -22,6 +22,18 @@ export const sparkAddressSchema = z.string().regex(/^spark(1|t1|rt1|test1)[a-z0-
 }).min(14).max(90)
 
 /**
+ * Bitcoin address schema
+ * Supports:
+ * - P2PKH (starts with 1, 26-35 chars)
+ * - P2SH (starts with 3, 26-35 chars)
+ * - SegWit (starts with bc1, 14-74 chars)
+ * - Testnet (starts with m, n, 2, tb1)
+ */
+export const bitcoinAddressSchema = z.string().regex(/^(1|3|bc1|m|n|2|tb1)[a-zA-Z0-9]+$/, {
+  message: 'Must be a valid Bitcoin address',
+}).min(14).max(90)
+
+/**
  * Address schema (Generic)
  * Allows any non-empty string to support any blockchain (BTC, Solana, etc.)
  */

@@ -8,6 +8,8 @@ import {
   isWalletAddresses,
   isWalletBalances,
   isEthereumAddress,
+  isBitcoinAddress,
+  isValidAddress,
   isAssetConfig,
   isValidAccountIndex,
   isValidNetworkName,
@@ -150,6 +152,34 @@ describe('typeGuards', () => {
       expect(isEthereumAddress('1234567890123456789012345678901234567890')).toBe(false)
       expect(isEthereumAddress(null)).toBe(false)
       expect(isEthereumAddress(123)).toBe(false)
+    })
+  })
+
+  describe('isBitcoinAddress', () => {
+    it('should return true for valid Bitcoin addresses', () => {
+      expect(isBitcoinAddress('1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2')).toBe(true) // P2PKH
+      expect(isBitcoinAddress('3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy')).toBe(true) // P2SH
+      expect(isBitcoinAddress('bc1kar0e9mqcqkv58l9v8rl35j75ds3y04e650v855')).toBe(true) // SegWit
+      expect(isBitcoinAddress('tb1q8cqh463223123213...')).toBe(true) // Testnet (simplified)
+    })
+
+    it('should return false for invalid Bitcoin addresses', () => {
+      expect(isBitcoinAddress('')).toBe(false)
+      expect(isBitcoinAddress('0x123')).toBe(false) // ETH address
+      expect(isBitcoinAddress('invalid')).toBe(false)
+      expect(isBitcoinAddress(null)).toBe(false)
+    })
+  })
+
+  describe('isValidAddress', () => {
+    it('should return true for valid addresses (ETH or BTC)', () => {
+      expect(isValidAddress('0x1234567890123456789012345678901234567890')).toBe(true)
+      expect(isValidAddress('bc1kar0e9mqcqkv58l9v8rl35j75ds3y04e650v855')).toBe(true)
+    })
+
+    it('should return false for invalid addresses', () => {
+      expect(isValidAddress('')).toBe(false)
+      expect(isValidAddress('invalid')).toBe(false)
     })
   })
 
